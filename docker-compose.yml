@@ -1,0 +1,46 @@
+# Local dev only — see docs/developer-guide.md Section 11 for how these services
+# map onto the deployed environment (Railway + Neon). Hardcoded passwords are
+# dev-only by design; deployed secrets live in Railway's variable store.
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: wms
+      POSTGRES_USER: wms
+      POSTGRES_PASSWORD: wms_dev_password
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: start-dev
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    ports: ["8080:8080"]
+
+  backend:
+    build: ./backend
+    env_file: .env
+    depends_on: [postgres, redis, keycloak]
+    ports: ["8000:8000"]
+
+  worker:
+    build: ./backend
+    command: python -m app.worker
+    env_file: .env
+    depends_on: [postgres, redis]
+
+  frontend:
+    build: ./frontend
+    env_file: .env
+    depends_on: [backend]
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:
