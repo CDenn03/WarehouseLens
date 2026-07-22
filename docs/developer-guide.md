@@ -354,6 +354,8 @@ Four roles, enforced by the backend after Keycloak validates the JWT: **Admin** 
 
 Every endpoint and tool that filters by `warehouse_id` needs the scope check added at the same time it's built, not bolted on after — this touches every permission check in the API and the agent, so treat it as part of Phase 1/2, not a later pass (Section 10).
 
+For the BFF cookie-auth architecture, Swagger UI configuration, Keycloak realm setup, JWT validation against JWKS, and cookie specification, see [auth-bff-pattern.md](./auth-bff-pattern.md).
+
 ## 10. Build Order
 
 Sequenced so the parts your evaluation plan actually measures get built and tested before the parts that don't have a metric attached. If the term runs short, later phases are what should slip — not the agent evaluation.

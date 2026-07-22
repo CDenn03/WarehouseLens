@@ -40,7 +40,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <p className="whitespace-pre-wrap">{message.content}</p>
         {!isUser && message.toolUsed && (
           <div className="mt-2">
-            <Badge tone="indigo" className="normal-case">
+            <Badge tone="brand" className="normal-case">
               tool: {message.toolUsed}
             </Badge>
           </div>

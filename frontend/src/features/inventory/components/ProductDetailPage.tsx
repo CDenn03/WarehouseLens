@@ -89,7 +89,7 @@ export async function ProductDetailPage({ productId }: { productId: string }) {
         description={`${product.category} · Unit cost ${formatCurrency(product.unit_cost)}`}
         actions={
           <div className="flex items-center gap-2">
-            <Badge tone="indigo">{product.sku}</Badge>
+            <Badge tone="brand">{product.sku}</Badge>
             {belowReorder > 0 && (
               <Badge tone="red">
                 {belowReorder} warehouse{belowReorder === 1 ? "" : "s"} below

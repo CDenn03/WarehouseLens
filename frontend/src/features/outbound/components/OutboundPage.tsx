@@ -52,7 +52,7 @@ export async function OutboundPage({
     <div className="space-y-6">
       <PageHeader
         title="Outbound"
-        description="Sales orders, internal transfers and the pick → pack → ship flow"
+        description="Sales orders, internal transfers and the pick > pack > ship flow"
         actions={
           <>
             <NewTransferModal warehouses={warehouses} products={products} />

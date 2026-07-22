@@ -122,7 +122,7 @@ function PickListRow({
 }
 
 /* ------------------------------------------------------------------ */
-/* Whole workflow: create pick list → pick → complete → ship → deliver */
+/* Whole workflow: create pick list > pick > complete > ship > deliver */
 /* ------------------------------------------------------------------ */
 
 const steps = ["Pick", "Pack", "Ship", "Deliver"] as const;

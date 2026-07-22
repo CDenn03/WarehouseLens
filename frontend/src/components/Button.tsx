@@ -6,13 +6,13 @@ type Size = "sm" | "md";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 disabled:bg-indigo-300",
+    "text-[#f4f3ee] disabled:opacity-50",
   secondary:
-    "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-indigo-600 disabled:text-slate-400",
+    "border bg-white disabled:opacity-50",
   danger:
     "bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600 disabled:bg-red-300",
   ghost:
-    "text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-indigo-600 disabled:text-slate-300",
+    "hover:bg-brand-50 disabled:opacity-40",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -34,18 +34,31 @@ export function Button({
   className,
   children,
   type = "button",
+  style,
   ...rest
 }: ButtonProps) {
+  // Inline CSS vars for the green brand tokens that Tailwind can't resolve at
+  // build time from arbitrary values — keeps the component dependency-free.
+  const variantStyle =
+    variant === "primary"
+      ? { background: "var(--green-900)", ...style }
+      : variant === "secondary"
+      ? { borderColor: "var(--border)", color: "var(--ink-soft)", ...style }
+      : variant === "ghost"
+      ? { color: "var(--ink-soft)", ...style }
+      : style;
+
   return (
     <button
       type={type}
       disabled={disabled || isLoading}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg font-medium shadow-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],
         className,
       )}
+      style={variantStyle}
       {...rest}
     >
       {isLoading && (

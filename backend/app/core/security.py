@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 from fastapi import Depends, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -28,6 +29,8 @@ WAREHOUSE_SCOPED_ROLES = {ROLE_WAREHOUSE_MANAGER, ROLE_PROCUREMENT_OFFICER}
 
 READ_ONLY_ROLES = {ROLE_AUDITOR}
 
+bearer_scheme = HTTPBearer(auto_error=False)
+
 
 @dataclass
 class CurrentUser:
@@ -43,43 +46,42 @@ class CurrentUser:
 
 
 async def get_current_user(
-    authorization: str | None = Header(default=None),
-    x_debug_user: str | None = Header(default=None),
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    x_debug_user: str | None = Header(default=None, include_in_schema=False),
 ) -> CurrentUser:
-    """FastAPI dependency that will validate the Keycloak-issued JWT.
+    """FastAPI dependency that resolves the caller's identity.
 
-    TODO(learning): Real implementation outline — this is the core of the Keycloak
-    integration and worth doing by hand before reaching for a library:
-      1. Require `Authorization: Bearer <token>`; 401 if missing/malformed.
-      2. Fetch Keycloak's JWKS from
-         {KEYCLOAK_ISSUER_URL}/protocol/openid-connect/certs and CACHE it (the keys
-         rotate rarely; refetch on unknown `kid`). This is where Redis could hold the
-         JWKS cache, but an in-process dict is fine for one backend instance.
-      3. Verify signature (RS256), `iss` == KEYCLOAK_ISSUER_URL, `exp`, and audience.
-         Decision to make: Keycloak puts the client in `azp` and often sets
-         `aud=account` by default — you either add an audience mapper to the client in
-         the realm config, or validate `azp` instead of `aud`. The mapper is the
-         "correct" OIDC answer; `azp` is the pragmatic one. Try both, understand why.
-      4. Extract roles. Decision to make: realm roles live at
-         `realm_access.roles`; client roles at `resource_access.<client>.roles`.
-         Realm roles are simpler for 4 global role names; client roles keep the realm
-         reusable across apps. Pick one and normalize to the ROLE_* constants above.
-      5. Return CurrentUser(sub=claims["sub"], username=claims["preferred_username"], roles=...).
+    The Bearer security scheme (``bearer_scheme``) is what drives the
+    Swagger UI **Authorize** padlock button and the global
+    ``securitySchemes.HTTPBearer`` entry in the OpenAPI document.
 
-    TODO(learning): Realm setup this depends on (do it in the Keycloak admin console,
-    export the realm JSON into the repo afterwards so it's reproducible):
-      - realm `warehouselens`; client `warehouselens-backend` (bearer-only / no login UI)
-        and `warehouselens-frontend` (public client, Authorization Code + PKCE — the
-        frontend does the login redirect, the backend only ever *verifies* tokens);
-      - the four realm roles; a few test users with role mappings.
+    Debug header
+    ~~~~~~~~~~~~
+    ``X-Debug-User`` ("sub:username:role1|role2") lets tests and the seed
+    script impersonate scoped users so RBAC logic is testable before
+    Keycloak exists.  It is hidden from the OpenAPI schema via
+    ``include_in_schema=False``.
 
-    Until then: a hardcoded admin. The optional `X-Debug-User` header
-    ("sub:username:role1|role2") lets tests and the seed script impersonate scoped
-    users so RBAC logic is testable before Keycloak exists.
+    Keycloak integration (TODO)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    Real implementation outline:
+      1. Fetch Keycloak's JWKS from
+         {KEYCLOAK_ISSUER_URL}/protocol/openid-connect/certs and CACHE it.
+      2. Verify signature (RS256), ``iss``, ``exp``, and audience.
+      3. Extract realm roles from ``realm_access.roles`` (or client roles
+         from ``resource_access.<client>.roles``).
+      4. Return CurrentUser(sub, preferred_username, roles).
+
+    Until then: ``X-Debug-User`` or a hardcoded admin fallback.
     """
+    # 1. Debug header — for tests and local development.
     if x_debug_user:
         sub, username, roles = x_debug_user.split(":", 2)
         return CurrentUser(sub=sub, username=username, roles=set(roles.split("|")))
+
+    # 2. JWT path — currently a scaffold, will validate against Keycloak.
+    # TODO: raise HTTPException(status_code=401) once Keycloak is live
+    #       and remove the hardcoded fallback.
     return CurrentUser(sub="fake-sub-admin", username="dev-admin", roles={ROLE_ADMIN})
 
 

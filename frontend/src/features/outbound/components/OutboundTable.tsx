@@ -31,7 +31,7 @@ function buildColumns(
         request.destination_warehouse_id ? (
           <Badge tone="blue">Internal transfer</Badge>
         ) : (
-          <Badge tone="indigo">Sales order</Badge>
+          <Badge tone="brand">Sales order</Badge>
         ),
     },
     {

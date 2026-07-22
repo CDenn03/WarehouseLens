@@ -87,7 +87,7 @@ export async function OutboundDetailPage({ requestId }: { requestId: string }) {
 
       <PageHeader
         title={`Outbound request #${String(request.id)}`}
-        description={`${source} → ${destination}${
+        description={`${source} > ${destination}${
           request.created_at ? ` · Created ${formatDateTime(request.created_at)}` : ""
         }`}
         actions={

@@ -107,7 +107,7 @@ export function outboundStatusTone(status: OutboundStatus): BadgeTone {
     case "picking":
       return "amber";
     case "packed":
-      return "indigo";
+      return "brand";
     case "shipped":
       return "blue";
     case "delivered":

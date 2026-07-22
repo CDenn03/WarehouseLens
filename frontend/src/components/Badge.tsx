@@ -6,16 +6,21 @@ export type BadgeTone =
   | "green"
   | "amber"
   | "red"
-  | "indigo"
+  | "brand"
   | "blue";
 
 const toneClasses: Record<BadgeTone, string> = {
   slate: "bg-slate-100 text-slate-700 ring-slate-200",
+  // Uses brand green — the primary tone
+  brand: "text-[#f4f3ee] ring-transparent",
   green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
   amber: "bg-amber-50 text-amber-700 ring-amber-200",
   red: "bg-red-50 text-red-700 ring-red-200",
-  indigo: "bg-indigo-50 text-indigo-700 ring-indigo-200",
   blue: "bg-sky-50 text-sky-700 ring-sky-200",
+};
+
+const toneStyle: Partial<Record<BadgeTone, React.CSSProperties>> = {
+  brand: { background: "var(--green-900)" },
 };
 
 export interface BadgeProps {
@@ -32,6 +37,7 @@ export function Badge({ tone = "slate", children, className }: BadgeProps) {
         toneClasses[tone],
         className,
       )}
+      style={toneStyle[tone]}
     >
       {children}
     </span>

@@ -22,7 +22,7 @@ export interface NewProductInput {
   unit_cost: number;
 }
 
-/** Per-warehouse stock breakdown row (GET /products/{id}/stock → .stock[]). */
+/** Per-warehouse stock breakdown row (GET /products/{id}/stock > .stock[]). */
 export interface ProductStock {
   warehouse_id: string;
   warehouse_name: string;
