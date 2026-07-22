@@ -27,5 +27,5 @@ async def domain_error_handler(_request: Request, exc: WarehouseLensError) -> JS
 
 
 @app.get("/health")
-def health() -> dict:
+async def health() -> dict:
     return {"status": "ok"}

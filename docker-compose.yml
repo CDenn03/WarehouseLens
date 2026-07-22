@@ -1,7 +1,6 @@
 # Local dev only — see docs/developer-guide.md Section 11 for how these services
 # map onto the deployed environment (Railway + Neon). Hardcoded passwords are
 # dev-only by design; deployed secrets live in Railway's variable store.
-version: "3.9"
 services:
   postgres:
     image: postgres:16
@@ -9,8 +8,13 @@ services:
       POSTGRES_DB: wms
       POSTGRES_USER: wms
       POSTGRES_PASSWORD: wms_dev_password
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wms -d wms"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7
@@ -27,7 +31,16 @@ services:
   backend:
     build: ./backend
     env_file: .env
-    depends_on: [postgres, redis, keycloak]
+    volumes:
+      - ./backend:/srv
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      keycloak:
+        condition: service_started
     ports: ["8000:8000"]
 
   worker:
@@ -37,8 +50,13 @@ services:
     depends_on: [postgres, redis]
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      target: dev
     env_file: .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on: [backend]
     ports: ["3000:3000"]
 
