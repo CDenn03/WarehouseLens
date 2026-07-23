@@ -4,6 +4,9 @@
  * Every feature `services/` module goes through `apiFetch` so cross-cutting
  * concerns (base URL, JSON handling, error normalization and — eventually —
  * auth headers) live in exactly one place.
+ *
+ * The browser only talks to localhost:3000. Next.js rewrites proxy
+ * /api/v1/* to FastAPI at localhost:8000 (see next.config.js).
  */
 
 export class ApiError extends Error {
@@ -30,13 +33,11 @@ export interface ApiRequestOptions {
   cache?: RequestCache;
 }
 
-const BASE_URL = process.env.API_URL ?? "http://localhost:8000";
-
 export async function apiFetch<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const url = new URL(`/api/v1${path}`, BASE_URL);
+  const url = new URL(`/api/v1${path}`, window.location.origin);
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
       if (value !== undefined && value !== null && value !== "") {
@@ -50,18 +51,6 @@ export async function apiFetch<T>(
     headers["Content-Type"] = "application/json";
   }
 
-  // TODO(learning): once Keycloak is wired up, this is where the user's access
-  // token gets attached to every backend call:
-  //
-  //   const token = await getAccessToken();          // from '@/lib/auth'
-  //   if (token) headers.Authorization = `Bearer ${token}`;
-  //
-  // The backend then validates the JWT offline against Keycloak's JWKS
-  // (issuer + signature + audience + expiry) and enforces role / warehouse
-  // scoping server-side. The frontend NEVER being the security boundary is
-  // the whole point — this header is just how identity travels.
-  // Until then we intentionally attach nothing.
-
   let response: Response;
   try {
     response = await fetch(url.toString(), {
@@ -69,10 +58,11 @@ export async function apiFetch<T>(
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       cache: options.cache ?? "no-store",
+      credentials: "same-origin",
     });
   } catch (error) {
     throw new ApiError(
-      `Could not reach the WarehouseLens API at ${BASE_URL}. Is the backend running?`,
+      "Could not reach the WarehouseLens API. Is the backend running?",
       0,
       error,
     );

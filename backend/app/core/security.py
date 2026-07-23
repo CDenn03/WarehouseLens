@@ -1,13 +1,12 @@
-"""Auth & RBAC (Section 9).
+"""Auth & RBAC — migrated to permission-based authorization.
 
 Authentication uses Keycloak JWTs verified against the realm's JWKS endpoint.
-The dependency resolves identity via three sources (in priority order):
+The dependency resolves identity via two sources (in priority order):
   1. ``X-Debug-User`` header — tests and local dev only.
-  2. ``access_token`` cookie — BFF pattern, primary in production.
-  3. ``Authorization: Bearer`` header — Swagger UI / direct API callers.
+  2. ``Authorization: Bearer`` header — Swagger UI / BFF proxy.
 
-Enforcement helpers (roles + warehouse scope) are used by every router and
-agent tool.
+Authorization is permission-based: ``require_permission()`` resolves the
+caller's permissions from the database and enforces deny-by-default.
 """
 
 from dataclasses import dataclass, field
@@ -15,7 +14,7 @@ from uuid import UUID
 
 import httpx
 import jwt
-from fastapi import Depends, Header, HTTPException, Request, Response
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -46,6 +45,7 @@ class CurrentUser:
     sub: str
     username: str
     roles: set[str] = field(default_factory=set)
+    permissions: set[str] = field(default_factory=set)
 
     @property
     def is_global(self) -> bool:
@@ -88,7 +88,6 @@ def _verify_token(token: str, jwks: dict[str, dict]) -> dict:
 
 async def get_current_user(
     request: Request,
-    response: Response,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     x_debug_user: str | None = Header(default=None, include_in_schema=False),
 ) -> CurrentUser:
@@ -96,23 +95,17 @@ async def get_current_user(
 
     Resolution order:
       1. ``X-Debug-User`` header — tests and local dev (``sub:username:role1|role2``).
-      2. ``access_token`` cookie — BFF pattern, primary in production.
-      3. ``Authorization: Bearer`` header — Swagger UI / direct API callers.
-      4. No credentials → 401.
+      2. ``Authorization: Bearer`` header — Swagger UI / BFF proxy.
+      3. No credentials → 401.
     """
     # 1. Debug header — tests and local development.
     if x_debug_user:
         sub, username, roles = x_debug_user.split(":", 2)
         return CurrentUser(sub=sub, username=username, roles=set(roles.split("|")))
 
-    # 2. Cookie (BFF pattern — primary in production).
-    token = request.cookies.get("access_token")
-
-    # 3. Bearer header (Swagger fallback).
-    if not token and credentials:
+    # 2. Bearer header — Swagger / BFF proxy.
+    if credentials:
         token = credentials.credentials
-
-    if token:
         jwks = JWKS_CACHE or await _fetch_jwks()
         try:
             payload = _verify_token(token, jwks)
@@ -121,6 +114,8 @@ async def get_current_user(
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
+        # Temporary: extract roles from JWT during migration.
+        # Target state: JWT is identity-only, permissions come from the database.
         roles = set(payload.get("realm_access", {}).get("roles", []))
         return CurrentUser(
             sub=payload["sub"],
@@ -128,12 +123,40 @@ async def get_current_user(
             roles=roles,
         )
 
-    # 4. No auth — 401.
+    # 3. No auth — 401.
     raise HTTPException(status_code=401, detail="Not authenticated")
 
 
+def require_permission(permission: str):
+    """Router dependency: 403 unless the caller has the specified permission.
+
+    Resolves permissions from the database via the permission service.
+    Deny-by-default: if the permission is not in the resolved set, access is denied.
+    """
+
+    async def checker(
+        user: CurrentUser = Depends(get_current_user),
+        db: Session = Depends(get_db),
+    ) -> CurrentUser:
+        from app.services.permission_service import resolve_permissions
+
+        user.permissions = resolve_permissions(db, user.sub)
+        if permission not in user.permissions:
+            raise ForbiddenError(
+                f"requires permission '{permission}', "
+                f"caller has {sorted(user.permissions) or '(none)'}"
+            )
+        return user
+
+    return checker
+
+
 def require_roles(*allowed: str):
-    """Router dependency: 403 unless the caller has one of `allowed`."""
+    """Router dependency: 403 unless the caller has one of `allowed`.
+
+    DEPRECATED: Use require_permission() instead. Kept for backward
+    compatibility during migration.
+    """
 
     async def checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
         if not user.roles & set(allowed):

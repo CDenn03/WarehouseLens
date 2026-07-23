@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from app.core.database import get_db
-from app.core.security import ROLE_ADMIN, CurrentUser, get_current_user, require_roles
+from app.core.security import CurrentUser, get_current_user, require_permission
 from app.schemas.warehouse import AssignmentCreate, AssignmentRead, WarehouseCreate, WarehouseRead
 from app.services import warehouse_service
 
@@ -21,7 +21,7 @@ def list_warehouses(
 def create_warehouse(
     data: WarehouseCreate,
     db: Session = Depends(get_db),
-    _user: CurrentUser = Depends(require_roles(ROLE_ADMIN)),
+    _user: CurrentUser = Depends(require_permission("warehouse.create")),
 ):
     return warehouse_service.create_warehouse(db, data)
 
@@ -31,6 +31,6 @@ def assign_user(
     warehouse_id: UUID,
     data: AssignmentCreate,
     db: Session = Depends(get_db),
-    _user: CurrentUser = Depends(require_roles(ROLE_ADMIN)),
+    _user: CurrentUser = Depends(require_permission("warehouse.assign_user")),
 ):
     return warehouse_service.assign_user(db, warehouse_id, data.user_id)

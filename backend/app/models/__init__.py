@@ -1,4 +1,11 @@
 from app.models.base import Base
+from app.models.authorization import (
+    AccessDecision,
+    Permission,
+    Role,
+    RolePermission,
+    UserRole,
+)
 from app.models.warehouse import UserWarehouseAssignment, Warehouse
 from app.models.product import Product, WarehouseStock
 from app.models.supplier import Supplier
@@ -17,6 +24,11 @@ from app.models.analytics import DailyWarehouseMetric, ForecastResult
 
 __all__ = [
     "Base",
+    "AccessDecision",
+    "Permission",
+    "Role",
+    "RolePermission",
+    "UserRole",
     "Warehouse",
     "UserWarehouseAssignment",
     "Product",
