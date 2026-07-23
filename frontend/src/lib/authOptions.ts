@@ -17,7 +17,10 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async session({ session, token }) {
-      (session as { accessToken?: string }).accessToken = token.accessToken as string;
+      // Expose access token for the BFF proxy route (server-side only — never
+      // reaches browser JS).
+      (session as unknown as Record<string, unknown>).accessToken =
+        token.accessToken as string;
       return session;
     },
   },

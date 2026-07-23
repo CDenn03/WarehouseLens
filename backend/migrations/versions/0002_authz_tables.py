@@ -67,6 +67,7 @@ def upgrade() -> None:
         INSERT INTO permissions (id, description, category) VALUES
         ('warehouse.create',          'Create warehouses',                     'warehouse'),
         ('warehouse.assign_user',     'Assign users to warehouses',            'warehouse'),
+        ('warehouse.global',          'Global warehouse scope (all warehouses)','warehouse'),
         ('inventory.read',            'View inventory',                        'inventory'),
         ('inventory.write',           'Create inventory transactions',         'inventory'),
         ('inventory.product.create',  'Create products',                       'inventory'),
@@ -93,13 +94,13 @@ def upgrade() -> None:
     ON CONFLICT (slug) DO NOTHING;
     """)
 
-    # Admin gets all permissions.
+    # Admin gets all permissions (including warehouse.global).
     op.execute("""
         INSERT INTO role_permissions (role_id, permission_id)
         SELECT 'a0000000-0000-0000-0000-000000000001', id FROM permissions
     """)
 
-    # Warehouse Manager: inventory + outbound + dashboard + forecast + agent.
+    # Warehouse Manager: inventory + outbound + dashboard + forecast + agent (no warehouse.global).
     op.execute("""
         INSERT INTO role_permissions (role_id, permission_id)
         SELECT 'a0000000-0000-0000-0000-000000000002', id FROM permissions
@@ -119,11 +120,11 @@ def upgrade() -> None:
                      'dashboard.read','forecast.read','agent.invoke')
     """)
 
-    # Auditor: read-only access to everything.
+    # Auditor: read-only + warehouse.global (all-warehouse scope for reports).
     op.execute("""
         INSERT INTO role_permissions (role_id, permission_id)
         SELECT 'a0000000-0000-0000-0000-000000000004', id FROM permissions
-        WHERE id IN ('inventory.read','dashboard.read','forecast.read')
+        WHERE id IN ('inventory.read','dashboard.read','forecast.read','warehouse.global')
     """)
 
 

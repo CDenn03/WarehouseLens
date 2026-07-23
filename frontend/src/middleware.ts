@@ -1,9 +1,13 @@
-import { withAuth } from "next-auth/middleware";
+import { NextRequest, NextResponse } from "next/server";
 
-export default withAuth({
-  pages: { signIn: "/api/auth/signin" },
-});
+export function middleware(request: NextRequest) {
+  const requestId =
+    request.headers.get("x-request-id") ?? `req-${crypto.randomUUID()}`;
+  const response = NextResponse.next();
+  response.headers.set("x-request-id", requestId);
+  return response;
+}
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/inventory/:path*"],
+  matcher: ["/api/v1/:path*"],
 };

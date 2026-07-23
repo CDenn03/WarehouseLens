@@ -70,13 +70,12 @@ def receive_purchase_order(
 
     result = procurement_service.receive_purchase_order(db, po_id, data or PurchaseOrderReceive())
 
-    # Audit log — state-changing financial action.
     log_access_decision(
         db,
         user_id=user.sub,
         permission_id="procurement.order.receive",
         decision="allow",
-        source=f"role:{','.join(sorted(user.roles))}",
+        source="bff:permission_db",
         action_context=f"po_id={po_id}",
     )
     db.commit()

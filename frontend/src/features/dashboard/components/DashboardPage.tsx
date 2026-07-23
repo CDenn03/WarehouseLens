@@ -45,7 +45,7 @@ export async function DashboardPage({ warehouseId }: { warehouseId?: string }) {
     : "All warehouses";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 bg-re">
       <PageHeader
         title="Dashboard"
         description={`Warehouse operations at a glance · ${scopeName}`}

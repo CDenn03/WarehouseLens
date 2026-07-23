@@ -1,5 +1,4 @@
 import "next-auth";
-import "next-auth/jwt";
 
 declare module "next-auth" {
   interface Session {
@@ -7,8 +6,6 @@ declare module "next-auth" {
     user: {
       sub: string;
       name: string;
-      roles: string[];
-      assignedWarehouseIds: string[];
     } & DefaultSession["user"];
   }
 }

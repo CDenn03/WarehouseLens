@@ -1,14 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: "http://localhost:8000/api/v1/:path*",
-      },
-    ];
-  },
+  // BFF proxy route at src/app/api/v1/[...path]/route.ts handles all /api/v1/* requests.
+  // No rewrites needed — the route handler attaches the Bearer token server-side.
 };
 
 module.exports = nextConfig;

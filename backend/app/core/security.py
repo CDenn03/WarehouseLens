@@ -3,6 +3,7 @@
 Authentication uses Keycloak JWTs verified against the realm's JWKS endpoint.
 The dependency resolves identity via two sources (in priority order):
   1. ``X-Debug-User`` header — tests and local dev only.
+     Format: ``sub:username:perm1|perm2`` (permission-based, not role-based).
   2. ``Authorization: Bearer`` header — Swagger UI / BFF proxy.
 
 Authorization is permission-based: ``require_permission()`` resolves the
@@ -24,32 +25,25 @@ from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.models.warehouse import UserWarehouseAssignment
 
-ROLE_ADMIN = "admin"
-ROLE_WAREHOUSE_MANAGER = "warehouse_manager"
-ROLE_PROCUREMENT_OFFICER = "procurement_officer"
-ROLE_AUDITOR = "auditor"
-
-# Admin and Auditor are global — they never appear in user_warehouse_assignments
-# (Section 13.3). Only these two roles get scope-checked.
-WAREHOUSE_SCOPED_ROLES = {ROLE_WAREHOUSE_MANAGER, ROLE_PROCUREMENT_OFFICER}
-
-READ_ONLY_ROLES = {ROLE_AUDITOR}
-
 bearer_scheme = HTTPBearer(auto_error=False)
+
+# Permissions that grant global (all-warehouse) scope.
+_GLOBAL_PERMISSIONS = {"warehouse.global"}
 
 
 @dataclass
 class CurrentUser:
-    """What the backend trusts about the caller, extracted from the Keycloak JWT."""
+    """What the backend trusts about the caller, extracted from the Keycloak JWT.
+
+    Fields:
+      sub:      stable Keycloak subject identifier
+      username: human-readable preferred_username
+      permissions: resolved from the DB by require_permission() — never from JWT
+    """
 
     sub: str
     username: str
-    roles: set[str] = field(default_factory=set)
     permissions: set[str] = field(default_factory=set)
-
-    @property
-    def is_global(self) -> bool:
-        return bool(self.roles & {ROLE_ADMIN, ROLE_AUDITOR})
 
 
 JWKS_CACHE: dict[str, dict] = {}
@@ -94,14 +88,14 @@ async def get_current_user(
     """FastAPI dependency that resolves the caller's identity.
 
     Resolution order:
-      1. ``X-Debug-User`` header — tests and local dev (``sub:username:role1|role2``).
+      1. ``X-Debug-User`` header — tests and local dev (``sub:username:perm1|perm2``).
       2. ``Authorization: Bearer`` header — Swagger UI / BFF proxy.
       3. No credentials → 401.
     """
     # 1. Debug header — tests and local development.
     if x_debug_user:
-        sub, username, roles = x_debug_user.split(":", 2)
-        return CurrentUser(sub=sub, username=username, roles=set(roles.split("|")))
+        sub, username, _perms = x_debug_user.split(":", 2)
+        return CurrentUser(sub=sub, username=username)
 
     # 2. Bearer header — Swagger / BFF proxy.
     if credentials:
@@ -114,13 +108,11 @@ async def get_current_user(
         except jwt.InvalidTokenError:
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Temporary: extract roles from JWT during migration.
-        # Target state: JWT is identity-only, permissions come from the database.
-        roles = set(payload.get("realm_access", {}).get("roles", []))
+        # JWT is identity-only — roles are intentionally ignored here.
+        # Permissions are resolved from the database by require_permission().
         return CurrentUser(
             sub=payload["sub"],
             username=payload.get("preferred_username", ""),
-            roles=roles,
         )
 
     # 3. No auth — 401.
@@ -151,22 +143,7 @@ def require_permission(permission: str):
     return checker
 
 
-def require_roles(*allowed: str):
-    """Router dependency: 403 unless the caller has one of `allowed`.
-
-    DEPRECATED: Use require_permission() instead. Kept for backward
-    compatibility during migration.
-    """
-
-    async def checker(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
-        if not user.roles & set(allowed):
-            raise ForbiddenError(
-                f"requires one of roles {sorted(allowed)}, caller has {sorted(user.roles)}"
-            )
-        return user
-
-    return checker
-
+# ── Warehouse scope ────────────────────────────────────────────────────
 
 def assigned_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
     rows = db.execute(
@@ -177,11 +154,19 @@ def assigned_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
     return set(rows)
 
 
+def _ensure_permissions(db: Session, user: CurrentUser) -> None:
+    """Lazily resolve permissions from the DB if not already populated."""
+    if not user.permissions:
+        from app.services.permission_service import resolve_permissions
+        user.permissions = resolve_permissions(db, user.sub)
+
+
 def enforce_warehouse_scope(db: Session, user: CurrentUser, warehouse_id: UUID | None) -> None:
     """The warehouse-scope check (Sections 9, 13.3). Called by every service entry
     point and agent tool that touches a specific warehouse — built in from Phase 1,
-    not bolted on. Admin/Auditor are global; scoped roles must be assigned."""
-    if user.is_global:
+    not bolted on. Users with ``warehouse.global`` permission bypass scoping."""
+    _ensure_permissions(db, user)
+    if _GLOBAL_PERMISSIONS & user.permissions:
         return
     if warehouse_id is None:
         raise ForbiddenError("warehouse-scoped role must specify a warehouse_id")
@@ -190,8 +175,9 @@ def enforce_warehouse_scope(db: Session, user: CurrentUser, warehouse_id: UUID |
 
 
 def scope_filter_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID] | None:
-    """For list endpoints: None means 'no filter' (global roles); otherwise the set
+    """For list endpoints: None means 'no filter' (global); otherwise the set
     of warehouse ids the caller may see (possibly empty)."""
-    if user.is_global:
+    _ensure_permissions(db, user)
+    if _GLOBAL_PERMISSIONS & user.permissions:
         return None
     return assigned_warehouse_ids(db, user)

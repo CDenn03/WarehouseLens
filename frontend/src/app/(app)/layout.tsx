@@ -44,9 +44,6 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               <p className="text-sm font-medium" style={{ color: "var(--ink)" }}>
                 {session.user.name}
               </p>
-              <p className="text-xs capitalize" style={{ color: "var(--ink-mute)" }}>
-                {session.user.roles.join(", ").replace(/_/g, " ")}
-              </p>
             </div>
             <div
               className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-ink-on-brand"

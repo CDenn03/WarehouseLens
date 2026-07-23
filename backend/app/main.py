@@ -1,15 +1,35 @@
+import logging
+import sys
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1 import router as v1_router
+from app.core.correlation import CorrelationIDMiddleware, get_request_id
 from app.core.exceptions import WarehouseLensError
+
+# Structured logging: every record includes the correlation ID.
+class ContextFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = get_request_id() or "-"
+        return True
+
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(
+    logging.Formatter("%(asctime)s %(levelname)s [%(request_id)s] %(message)s")
+)
+handler.addFilter(ContextFilter())
+root = logging.getLogger()
+root.handlers.clear()
+root.addHandler(handler)
+root.setLevel(logging.INFO)
 
 app = FastAPI(title="WarehouseLens", version="0.1.0")
 
-# Local dev: the frontend calls the backend from the browser on a different port.
-# Deployed, calls go over Railway's private network (RAILWAY.md), so this list
-# never needs a production origin.
+app.add_middleware(CorrelationIDMiddleware)
+
+# BFF proxy handles same-origin — CORS only needed for Swagger UI in dev.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],

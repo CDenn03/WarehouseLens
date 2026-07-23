@@ -6,13 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import (
-    ROLE_ADMIN,
-    ROLE_PROCUREMENT_OFFICER,
-    ROLE_WAREHOUSE_MANAGER,
     CurrentUser,
     enforce_warehouse_scope,
     get_current_user,
-    require_roles,
+    require_permission,
     scope_filter_warehouse_ids,
 )
 from app.schemas.inventory import TransactionCreate, TransactionRead
@@ -35,7 +32,7 @@ def list_products(
 def create_product(
     data: ProductCreate,
     db: Session = Depends(get_db),
-    _user: CurrentUser = Depends(require_roles(ROLE_ADMIN, ROLE_PROCUREMENT_OFFICER)),
+    _user: CurrentUser = Depends(require_permission("inventory.product.create")),
 ):
     return inventory_service.create_product(db, data)
 
@@ -71,7 +68,7 @@ def list_transactions(
 def create_transaction(
     data: TransactionCreate,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_roles(ROLE_ADMIN, ROLE_WAREHOUSE_MANAGER)),
+    user: CurrentUser = Depends(require_permission("inventory.write")),
 ):
     enforce_warehouse_scope(db, user, data.warehouse_id)
     return inventory_service.create_manual_transaction(db, data)
