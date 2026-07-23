@@ -94,7 +94,7 @@ export function NewSalesOrderModal({
             />
           </div>
           <LineItemsEditor items={items} onChange={setItems} products={products} />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={close} disabled={isPending}>
               Cancel

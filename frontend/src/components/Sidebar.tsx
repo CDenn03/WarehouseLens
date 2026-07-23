@@ -68,11 +68,11 @@ export function Sidebar({ appName }: { appName: string }) {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-white" style={{ borderColor: "var(--border-soft)" }}>
+    <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r bg-surface-panel" style={{ borderColor: "var(--border-soft)" }}>
       {/* Brand mark — matches the /WarehouseLens style from the landing page */}
       <div className="flex h-14 items-center gap-2 border-b px-5" style={{ borderColor: "var(--border-soft)" }}>
         <span
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-white"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-on-brand"
           style={{ background: "var(--green-900)" }}
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -94,12 +94,12 @@ export function Sidebar({ appName }: { appName: string }) {
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "text-white"
+                  ? "text-ink-on-brand"
                   : "hover:bg-brand-50",
               )}
               style={
                 active
-                  ? { background: "var(--green-900)", color: "#f4f3ee" }
+                  ? { background: "var(--green-900)", color: "var(--ink-on-brand)" }
                   : { color: "var(--ink-soft)" }
               }
               aria-current={active ? "page" : undefined}

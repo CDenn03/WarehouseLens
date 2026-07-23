@@ -77,12 +77,12 @@ export function AdjustmentForm({
         placeholder="e.g. -5 or 120"
         required
       />
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-ink-mute">
         Positive numbers add stock, negative numbers remove it.
       </p>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
       {success && (
-        <p className="text-sm text-emerald-600">
+        <p className="text-sm text-success">
           Adjustment recorded — stock figures updated.
         </p>
       )}

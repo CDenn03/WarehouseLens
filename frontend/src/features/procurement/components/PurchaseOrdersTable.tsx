@@ -17,7 +17,7 @@ function buildColumns(
       key: "id",
       header: "PO",
       render: (po) => (
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-ink">
           #{String(po.id).slice(0, 8)}
         </span>
       ),

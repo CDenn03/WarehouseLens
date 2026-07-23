@@ -14,7 +14,7 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
       label: "Total inventory value",
       value: formatCurrency(kpis.total_inventory_value),
       hint: "On-hand quantity × unit cost",
-      accentClassName: "text-indigo-600",
+      accentClassName: "text-brand-900",
     },
     {
       label: "SKUs below reorder point",
@@ -24,13 +24,13 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
           ? "Needs procurement attention"
           : "All SKUs sufficiently stocked",
       accentClassName:
-        kpis.skus_below_reorder_point > 0 ? "text-amber-600" : "text-emerald-600",
+        kpis.skus_below_reorder_point > 0 ? "text-warning" : "text-success",
     },
     {
       label: "Open outbound requests",
       value: formatNumber(kpis.open_outbound_requests),
       hint: "Requested, picking or packed",
-      accentClassName: "text-sky-600",
+      accentClassName: "text-info",
     },
   ];
 
@@ -39,9 +39,9 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+          className="rounded-xl border border-brand-100 bg-surface-panel p-5 shadow-sm"
         >
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-ink-mute">
             {tile.label}
           </p>
           <p
@@ -52,7 +52,7 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
           >
             {tile.value}
           </p>
-          <p className="mt-1 text-xs text-slate-400">{tile.hint}</p>
+          <p className="mt-1 text-xs text-ink-mute">{tile.hint}</p>
         </div>
       ))}
     </div>

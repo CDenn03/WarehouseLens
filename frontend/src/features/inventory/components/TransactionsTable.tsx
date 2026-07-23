@@ -51,7 +51,7 @@ function buildColumns(
       <span
         className={cn(
           "font-medium tabular-nums",
-          row.quantity_delta >= 0 ? "text-emerald-600" : "text-red-600",
+          row.quantity_delta >= 0 ? "text-success" : "text-error",
         )}
       >
         {row.quantity_delta >= 0 ? "+" : ""}

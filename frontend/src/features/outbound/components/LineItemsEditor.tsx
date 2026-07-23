@@ -32,7 +32,7 @@ export function LineItemsEditor({
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-sm font-medium text-slate-700">Line items</legend>
+      <legend className="text-sm font-medium text-ink-soft">Line items</legend>
       {items.map((item, index) => (
         <div key={index} className="flex items-start gap-2">
           <div className="flex-1">

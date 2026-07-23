@@ -43,6 +43,9 @@
  *   never password grant (bypasses Keycloak's login page, MFA, etc.).
  */
 
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/authOptions";
+
 export type Role =
   | "admin"
   | "warehouse_manager"
@@ -103,15 +106,19 @@ export interface Session {
  *
  * HARDCODED for now so the app runs without Keycloak.
  */
-export async function getSession(): Promise<Session> {
+
+
+export async function getSession(): Promise<Session | null> {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return null;
   return {
     user: {
-      sub: "fake-sub-0000-dev-user",
-      name: "Brian Koton",
-      roles: ["admin"],
-      assignedWarehouseIds: [],
+      sub: session.user.sub,
+      name: session.user.name ?? "",
+      roles: ((session.user as { roles?: string[] }).roles ?? []) as Role[],
+      assignedWarehouseIds: (session.user as { assignedWarehouseIds?: string[] }).assignedWarehouseIds ?? [],
     },
-    expiresAt: new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    expiresAt: session.expires ?? "",
   };
 }
 

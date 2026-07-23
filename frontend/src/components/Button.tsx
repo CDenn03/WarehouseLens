@@ -6,11 +6,11 @@ type Size = "sm" | "md";
 
 const variantClasses: Record<Variant, string> = {
   primary:
-    "text-[#f4f3ee] disabled:opacity-50",
+    "text-ink-on-brand disabled:opacity-50",
   secondary:
-    "border bg-white disabled:opacity-50",
+    "border bg-surface-panel disabled:opacity-50",
   danger:
-    "bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600 disabled:bg-red-300",
+    "bg-error text-white hover:bg-error/90 focus-visible:outline-error disabled:bg-error/50",
   ghost:
     "hover:bg-brand-50 disabled:opacity-40",
 };

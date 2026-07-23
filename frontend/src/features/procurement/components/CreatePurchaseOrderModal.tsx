@@ -140,7 +140,7 @@ export function CreatePurchaseOrderModal({
           </div>
 
           <fieldset className="space-y-2">
-            <legend className="text-sm font-medium text-slate-700">
+            <legend className="text-sm font-medium text-ink-soft">
               Line items
             </legend>
             {items.map((item, index) => (
@@ -199,7 +199,7 @@ export function CreatePurchaseOrderModal({
             </Button>
           </fieldset>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={close} disabled={isPending}>
               Cancel

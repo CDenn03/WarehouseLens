@@ -10,13 +10,12 @@ export type BadgeTone =
   | "blue";
 
 const toneClasses: Record<BadgeTone, string> = {
-  slate: "bg-slate-100 text-slate-700 ring-slate-200",
-  // Uses brand green — the primary tone
-  brand: "text-[#f4f3ee] ring-transparent",
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  amber: "bg-amber-50 text-amber-700 ring-amber-200",
-  red: "bg-red-50 text-red-700 ring-red-200",
-  blue: "bg-sky-50 text-sky-700 ring-sky-200",
+  slate: "bg-brand-100 text-ink-soft ring-brand-300",
+  brand: "text-ink-on-brand ring-transparent",
+  green: "bg-success-light text-success-text ring-success-border",
+  amber: "bg-warning-light text-warning-text ring-warning-border",
+  red: "bg-error-light text-error-text ring-error-border",
+  blue: "bg-info-light text-info-text ring-info-border",
 };
 
 const toneStyle: Partial<Record<BadgeTone, React.CSSProperties>> = {

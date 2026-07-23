@@ -17,7 +17,7 @@ const columns: Column<Product>[] = [
     render: (product) => (
       <Link
         href={`/inventory/${product.id}`}
-        className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline"
+        className="font-medium text-brand-900 hover:text-brand-800 hover:underline"
       >
         {product.sku}
       </Link>
@@ -29,7 +29,7 @@ const columns: Column<Product>[] = [
     render: (product) => (
       <Link
         href={`/inventory/${product.id}`}
-        className="text-slate-900 hover:underline"
+        className="text-ink hover:underline"
       >
         {product.name}
       </Link>
@@ -65,7 +65,7 @@ export async function InventoryPage({ search }: { search?: string }) {
         actions={<NewProductModal />}
       />
       <Card flush>
-        <div className="border-b border-slate-100 p-4">
+        <div className="border-b border-brand-100 p-4">
           <ProductSearch initialValue={search ?? ""} />
         </div>
         <Table

@@ -11,10 +11,10 @@ export default function GlobalError({
 }) {
   return (
     <div className="mx-auto max-w-lg py-16 text-center">
-      <h1 className="text-lg font-semibold text-slate-900">
+      <h1 className="text-lg font-semibold text-ink">
         Something went wrong
       </h1>
-      <p className="mt-2 text-sm text-slate-500">
+      <p className="mt-2 text-sm text-ink-mute">
         {error.message || "An unexpected error occurred while rendering this page."}
       </p>
       <div className="mt-6">

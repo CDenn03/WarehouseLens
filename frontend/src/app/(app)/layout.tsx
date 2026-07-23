@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { getSession } from "@/lib/auth";
 
+import { redirect } from "next/navigation";
+
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "WarehouseLens";
 
 export const metadata: Metadata = {
@@ -23,9 +25,8 @@ function initialsOf(name: string): string {
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  // TODO(learning): once auth is real, getSession() can return null — this
-  // layout would then redirect to login (or middleware would have already).
   const session = await getSession();
+  if (!session) redirect("/api/auth/signin");
 
   return (
     <div className="flex min-h-screen">
@@ -48,7 +49,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
               </p>
             </div>
             <div
-              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-[#f4f3ee]"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-semibold text-ink-on-brand"
               style={{ background: "var(--green-900)" }}
               aria-hidden="true"
             >

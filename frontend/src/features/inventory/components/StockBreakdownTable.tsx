@@ -9,7 +9,7 @@ const columns: Column<ProductStock>[] = [
     key: "warehouse",
     header: "Warehouse",
     render: (row) => (
-      <span className="font-medium text-slate-900">{row.warehouse_name}</span>
+      <span className="font-medium text-ink">{row.warehouse_name}</span>
     ),
   },
   {
@@ -57,7 +57,7 @@ export function StockBreakdownTable({ rows }: { rows: ProductStock[] }) {
       rowKey={(row) => String(row.warehouse_id)}
       emptyMessage="No stock records for this product yet."
       rowClassName={(row) =>
-        row.quantity_on_hand < row.reorder_point ? "bg-red-50/60" : undefined
+        row.quantity_on_hand < row.reorder_point ? "bg-error-light/60" : undefined
       }
     />
   );

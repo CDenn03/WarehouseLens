@@ -31,10 +31,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
           isUser
-            ? "rounded-br-sm bg-indigo-600 text-white"
+            ? "rounded-br-sm bg-brand-900 text-ink-on-brand"
             : message.isError
-              ? "rounded-bl-sm border border-red-200 bg-red-50 text-red-700"
-              : "rounded-bl-sm border border-slate-200 bg-white text-slate-800",
+              ? "rounded-bl-sm border border-error-border bg-error-light text-error"
+              : "rounded-bl-sm border border-brand-100 bg-surface-panel text-ink",
         )}
       >
         <p className="whitespace-pre-wrap">{message.content}</p>
@@ -96,10 +96,10 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-brand-100 bg-surface-panel shadow-sm">
       {/* Scope selector */}
-      <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-4 py-3">
-        <p className="text-sm font-medium text-slate-700">Conversation scope</p>
+      <div className="flex items-center justify-between gap-4 border-b border-brand-100 px-4 py-3">
+        <p className="text-sm font-medium text-ink-soft">Conversation scope</p>
         <div className="w-56">
           <Select
             value={warehouseId}
@@ -117,12 +117,12 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
       {/* Message list */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto bg-slate-50/60 p-4"
+        className="flex-1 space-y-4 overflow-y-auto bg-brand-50/60 p-4"
         style={{ minHeight: "20rem" }}
       >
         {messages.length === 0 && !isPending ? (
           <div className="flex h-full flex-col items-center justify-center gap-4 py-8 text-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-ink-mute">
               Ask anything about your warehouse operations. Try one of these:
             </p>
             <div className="flex max-w-lg flex-wrap justify-center gap-2">
@@ -131,7 +131,7 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
                   key={suggestion}
                   type="button"
                   onClick={() => send(suggestion)}
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm transition-colors hover:border-indigo-300 hover:text-indigo-700"
+                  className="rounded-full border border-brand-100 bg-surface-panel px-3 py-1.5 text-xs text-ink-soft shadow-sm transition-colors hover:border-brand-300 hover:text-brand-900"
                 >
                   {suggestion}
                 </button>
@@ -145,10 +145,10 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
         )}
         {isPending && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-              <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-              <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" />
+            <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm border border-brand-100 bg-surface-panel px-4 py-3 shadow-sm">
+              <span className="h-2 w-2 animate-bounce rounded-full bg-ink-mute [animation-delay:-0.3s]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-ink-mute [animation-delay:-0.15s]" />
+              <span className="h-2 w-2 animate-bounce rounded-full bg-ink-mute" />
             </div>
           </div>
         )}
@@ -156,7 +156,7 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
 
       {/* Composer */}
       <form
-        className="flex items-end gap-2 border-t border-slate-100 p-4"
+        className="flex items-end gap-2 border-t border-brand-100 p-4"
         onSubmit={(event) => {
           event.preventDefault();
           send(input);

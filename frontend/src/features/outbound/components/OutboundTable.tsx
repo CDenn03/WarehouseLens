@@ -18,7 +18,7 @@ function buildColumns(
       render: (request) => (
         <Link
           href={`/outbound/${request.id}`}
-          className="font-medium text-indigo-600 hover:text-indigo-500 hover:underline"
+          className="font-medium text-brand-900 hover:text-brand-800 hover:underline"
         >
           #{String(request.id).slice(0, 8)}
         </Link>

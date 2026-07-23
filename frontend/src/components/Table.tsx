@@ -27,7 +27,7 @@ export function Table<T>({
 }: TableProps<T>) {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200 text-sm">
+      <table className="min-w-full divide-y divide-brand-100 text-sm">
         <thead>
           <tr>
             {columns.map((column) => (
@@ -35,7 +35,7 @@ export function Table<T>({
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500",
+                  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-mute",
                   column.className,
                 )}
               >
@@ -44,12 +44,12 @@ export function Table<T>({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-100">
+        <tbody className="divide-y divide-brand-100">
           {rows.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-8 text-center text-sm text-slate-400"
+                className="px-4 py-8 text-center text-sm text-ink-mute"
               >
                 {emptyMessage}
               </td>
@@ -58,12 +58,12 @@ export function Table<T>({
             rows.map((row) => (
               <tr
                 key={rowKey(row)}
-                className={cn("hover:bg-slate-50", rowClassName?.(row))}
+                className={cn("hover:bg-brand-50", rowClassName?.(row))}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={cn("px-4 py-3 text-slate-700", column.className)}
+                    className={cn("px-4 py-3 text-ink-soft", column.className)}
                   >
                     {column.render(row)}
                   </td>

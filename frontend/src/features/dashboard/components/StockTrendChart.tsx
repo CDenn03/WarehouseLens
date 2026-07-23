@@ -15,7 +15,7 @@ import type { StockTrendPoint } from "@/features/dashboard/types";
 export function StockTrendChart({ data }: { data: StockTrendPoint[] }) {
   if (data.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-slate-400">
+      <p className="py-10 text-center text-sm text-ink-mute">
         No stock history for this period.
       </p>
     );
@@ -25,17 +25,17 @@ export function StockTrendChart({ data }: { data: StockTrendPoint[] }) {
     <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--green-100)" vertical={false} />
           <XAxis
             dataKey="date"
             tickFormatter={formatShortDate}
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--ink-mute)" }}
             tickLine={false}
-            axisLine={{ stroke: "#e2e8f0" }}
+            axisLine={{ stroke: "var(--green-100)" }}
             minTickGap={24}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--ink-mute)" }}
             tickLine={false}
             axisLine={false}
             width={56}
@@ -46,14 +46,14 @@ export function StockTrendChart({ data }: { data: StockTrendPoint[] }) {
             formatter={(value: number) => [formatNumber(value), "Units on hand"]}
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--green-100)",
               fontSize: 12,
             }}
           />
           <Line
             type="monotone"
             dataKey="total_quantity_on_hand"
-            stroke="#4f46e5"
+            stroke="var(--green-900)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}

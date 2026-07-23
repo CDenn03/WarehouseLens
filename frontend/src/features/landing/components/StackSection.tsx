@@ -36,7 +36,7 @@ export function StackSection() {
               className="h-auto w-full"
               aria-hidden="true"
             >
-              <rect width="500" height="560" rx="16" fill="#22361e" />
+              <rect width="500" height="560" rx="16" fill="var(--green-900)" />
               <g stroke="rgba(255,255,255,0.08)" strokeWidth="1">
                 <line x1="0" y1="140" x2="500" y2="140" />
                 <line x1="0" y1="280" x2="500" y2="280" />
@@ -46,13 +46,13 @@ export function StackSection() {
                 <line x1="375" y1="0" x2="375" y2="560" />
               </g>
               <rect x="60" y="60" width="220" height="70" rx="8" fill="rgba(233,239,230,0.9)" />
-              <text x="80" y="102" fill="#22361e" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">FastAPI backend</text>
+              <text x="80" y="102" fill="var(--green-900)" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">FastAPI backend</text>
               <rect x="220" y="180" width="220" height="70" rx="8" fill="rgba(233,239,230,0.9)" />
-              <text x="240" y="222" fill="#22361e" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">Next.js frontend</text>
+              <text x="240" y="222" fill="var(--green-900)" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">Next.js frontend</text>
               <rect x="70" y="300" width="220" height="70" rx="8" fill="rgba(233,239,230,0.9)" />
-              <text x="90" y="342" fill="#22361e" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">Tool-routed agent</text>
+              <text x="90" y="342" fill="var(--green-900)" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="18">Tool-routed agent</text>
               <rect x="200" y="420" width="240" height="70" rx="8" fill="rgba(233,239,230,0.9)" />
-              <text x="220" y="462" fill="#22361e" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="15">Prophet + XGBoost</text>
+              <text x="220" y="462" fill="var(--green-900)" fontFamily="Inter, sans-serif" fontWeight="700" fontSize="15">Prophet + XGBoost</text>
             </svg>
           </div>
 

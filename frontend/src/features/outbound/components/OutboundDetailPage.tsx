@@ -28,7 +28,7 @@ function buildItemColumns(
       key: "product",
       header: "Product",
       render: (item) => (
-        <span className="font-medium text-slate-900">
+        <span className="font-medium text-ink">
           {productLabel(String(item.product_id))}
         </span>
       ),
@@ -79,7 +79,7 @@ export async function OutboundDetailPage({ requestId }: { requestId: string }) {
       <div>
         <Link
           href="/outbound"
-          className="text-sm text-indigo-600 hover:text-indigo-500 hover:underline"
+          className="text-sm text-brand-900 hover:text-brand-800 hover:underline"
         >
           ← Back to outbound requests
         </Link>

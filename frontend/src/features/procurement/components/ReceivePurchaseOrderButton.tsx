@@ -30,7 +30,7 @@ export function ReceivePurchaseOrderButton({
       >
         Receive
       </Button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-error">{error}</p>}
     </div>
   );
 }

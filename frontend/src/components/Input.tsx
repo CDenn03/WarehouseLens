@@ -3,7 +3,7 @@ import type { InputHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 const baseFieldClasses =
-  "block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-50 disabled:text-slate-400";
+  "block w-full rounded-lg border border-brand-300 bg-surface-panel px-3 py-2 text-sm text-ink shadow-sm placeholder:text-ink-mute focus:border-brand-900 focus:outline-none focus:ring-2 focus:ring-brand-100 disabled:bg-brand-50 disabled:text-ink-mute";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -22,7 +22,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     if (!label) return field;
     return (
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">{label}</span>
+        <span className="mb-1 block font-medium text-ink-soft">{label}</span>
         {field}
       </label>
     );
@@ -47,7 +47,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     if (!label) return field;
     return (
       <label className="block text-sm">
-        <span className="mb-1 block font-medium text-slate-700">{label}</span>
+        <span className="mb-1 block font-medium text-ink-soft">{label}</span>
         {field}
       </label>
     );

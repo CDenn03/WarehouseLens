@@ -123,7 +123,7 @@ export async function ProductDetailPage({ productId }: { productId: string }) {
             {forecast && forecast.points.length > 0 ? (
               <ForecastChart points={forecast.points} />
             ) : (
-              <p className="py-6 text-center text-sm text-slate-400">
+              <p className="py-6 text-center text-sm text-ink-mute">
                 {forecastError ?? "No forecast points returned for this product."}
               </p>
             )}

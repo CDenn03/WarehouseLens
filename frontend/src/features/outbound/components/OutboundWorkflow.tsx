@@ -67,19 +67,19 @@ function PickListRow({
   };
 
   return (
-    <div className="grid items-center gap-2 border-b border-slate-100 py-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto_auto]">
+    <div className="grid items-center gap-2 border-b border-brand-100 py-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto_auto]">
       <div>
-        <p className="text-sm font-medium text-slate-900">
+        <p className="text-sm font-medium text-ink">
           {productLabel(String(item.product_id))}
         </p>
         {target !== undefined && (
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ink-mute">
             Target: {formatNumber(target)} units
           </p>
         )}
-        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+        {error && <p className="mt-1 text-xs text-error">{error}</p>}
         {saved && !error && (
-          <p className="mt-1 text-xs text-emerald-600">Saved.</p>
+          <p className="mt-1 text-xs text-success">Saved.</p>
         )}
       </div>
       <div className="w-24">
@@ -190,9 +190,9 @@ export function OutboundWorkflow({
                 <span
                   className={cn(
                     "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
-                    done && "bg-emerald-500 text-white",
-                    active && "bg-indigo-600 text-white",
-                    !done && !active && "bg-slate-100 text-slate-400",
+                    done && "bg-success text-white",
+                    active && "bg-brand-900 text-ink-on-brand",
+                    !done && !active && "bg-brand-100 text-ink-mute",
                   )}
                 >
                   {done ? "✓" : index + 1}
@@ -201,28 +201,28 @@ export function OutboundWorkflow({
                   className={cn(
                     "text-sm",
                     done || active
-                      ? "font-medium text-slate-900"
-                      : "text-slate-400",
+                      ? "font-medium text-ink"
+                      : "text-ink-mute",
                   )}
                 >
                   {step}
                 </span>
                 {index < steps.length - 1 && (
-                  <span className="mx-1 h-px flex-1 bg-slate-200" />
+                  <span className="mx-1 h-px flex-1 bg-brand-100" />
                 )}
               </li>
             );
           })}
         </ol>
         {cancelled && (
-          <p className="mt-3 text-sm font-medium text-red-600">
+          <p className="mt-3 text-sm font-medium text-error">
             This request was cancelled — the workflow is locked.
           </p>
         )}
       </Card>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-lg border border-error-border bg-error-light px-4 py-3 text-sm text-error">
           {error}
         </div>
       )}
@@ -244,7 +244,7 @@ export function OutboundWorkflow({
         }
       >
         {request.pick_lists.length === 0 ? (
-          <p className="py-4 text-center text-sm text-slate-400">
+          <p className="py-4 text-center text-sm text-ink-mute">
             {canCreatePickList
               ? "No pick list yet — create one to start picking."
               : "No pick lists on this request."}
@@ -259,10 +259,10 @@ export function OutboundWorkflow({
               return (
                 <div
                   key={String(pickList.id)}
-                  className="rounded-lg border border-slate-200 p-4"
+                  className="rounded-lg border border-brand-100 p-4"
                 >
                   <div className="mb-2 flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-ink">
                       Pick list #{String(pickList.id)}
                     </p>
                     <div className="flex items-center gap-2">
@@ -315,26 +315,26 @@ export function OutboundWorkflow({
           <div className="space-y-3">
             <dl className="grid gap-3 text-sm sm:grid-cols-3">
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-ink-mute">
                   Carrier
                 </dt>
-                <dd className="mt-0.5 font-medium text-slate-900">
+                <dd className="mt-0.5 font-medium text-ink">
                   {shipment.carrier ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-ink-mute">
                   Tracking number
                 </dt>
-                <dd className="mt-0.5 font-medium text-slate-900">
+                <dd className="mt-0.5 font-medium text-ink">
                   {shipment.tracking_number ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs uppercase tracking-wide text-slate-500">
+                <dt className="text-xs uppercase tracking-wide text-ink-mute">
                   Shipped
                 </dt>
-                <dd className="mt-0.5 font-medium text-slate-900">
+                <dd className="mt-0.5 font-medium text-ink">
                   {formatDateTime(shipment.shipped_at)}
                 </dd>
               </div>
@@ -352,7 +352,7 @@ export function OutboundWorkflow({
               </Button>
             )}
             {request.status === "delivered" && (
-              <p className="text-sm font-medium text-emerald-600">
+              <p className="text-sm font-medium text-success">
                 Delivered
                 {shipment.delivered_at
                   ? ` on ${formatDateTime(shipment.delivered_at)}`
@@ -397,7 +397,7 @@ export function OutboundWorkflow({
             </Button>
           </form>
         ) : (
-          <p className="py-2 text-sm text-slate-400">
+          <p className="py-2 text-sm text-ink-mute">
             {cancelled
               ? "Cancelled requests cannot be shipped."
               : "Complete all pick lists first — shipping unlocks once the request is packed."}

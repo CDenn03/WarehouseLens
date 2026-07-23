@@ -33,13 +33,13 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
           <XAxis
             dataKey="date"
             tickFormatter={formatShortDate}
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--ink-mute)" }}
             tickLine={false}
-            axisLine={{ stroke: "#e2e8f0" }}
+            axisLine={{ stroke: "var(--green-100)" }}
             minTickGap={24}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#64748b" }}
+            tick={{ fontSize: 11, fill: "var(--ink-mute)" }}
             tickLine={false}
             axisLine={false}
             width={48}
@@ -58,7 +58,7 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
             }}
             contentStyle={{
               borderRadius: 8,
-              border: "1px solid #e2e8f0",
+              border: "1px solid var(--green-100)",
               fontSize: 12,
             }}
           />
@@ -66,14 +66,14 @@ export function ForecastChart({ points }: { points: ForecastPoint[] }) {
             type="monotone"
             dataKey="band"
             stroke="none"
-            fill="#c7d2fe"
+            fill="var(--green-100)"
             fillOpacity={0.6}
             isAnimationActive={false}
           />
           <Line
             type="monotone"
             dataKey="yhat"
-            stroke="#4f46e5"
+            stroke="var(--green-900)"
             strokeWidth={2}
             dot={false}
             isAnimationActive={false}

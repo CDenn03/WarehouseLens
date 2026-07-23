@@ -100,7 +100,7 @@ export function WhoSection() {
                 className="mb-5 inline-grid h-10 w-10 place-items-center rounded-xl"
                 style={
                   role.active
-                    ? { background: "rgba(244,243,238,0.12)", color: "#f4f3ee" }
+                    ? { background: "rgba(244,243,238,0.12)", color: "var(--ink-on-brand)" }
                     : { background: "var(--green-100)", color: "var(--green-900)" }
                 }
               >
@@ -108,7 +108,7 @@ export function WhoSection() {
               </span>
               <h3
                 className="mb-1.5 text-[1.02rem] font-bold"
-                style={{ color: role.active ? "#f4f3ee" : "var(--ink)" }}
+                style={{ color: role.active ? "var(--ink-on-brand)" : "var(--ink)" }}
               >
                 {role.label}
               </h3>

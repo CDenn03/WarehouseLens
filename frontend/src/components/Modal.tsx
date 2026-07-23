@@ -40,24 +40,24 @@ export function Modal({
       aria-label={title}
     >
       <div
-        className="absolute inset-0 bg-slate-900/50"
+        className="absolute inset-0 bg-ink/50"
         onClick={onClose}
         aria-hidden="true"
       />
       <div
-        className={`relative max-h-[90vh] w-full ${widthClassName} overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl`}
+        className={`relative max-h-[90vh] w-full ${widthClassName} overflow-y-auto rounded-xl border border-brand-100 bg-surface-panel shadow-xl`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-brand-100 px-5 py-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+            <h2 className="text-base font-semibold text-ink">{title}</h2>
             {description && (
-              <p className="mt-0.5 text-xs text-slate-500">{description}</p>
+              <p className="mt-0.5 text-xs text-ink-mute">{description}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1 text-ink-mute hover:bg-brand-50 hover:text-ink-soft"
             aria-label="Close dialog"
           >
             <svg

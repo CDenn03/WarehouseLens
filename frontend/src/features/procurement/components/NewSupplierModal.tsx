@@ -73,7 +73,7 @@ export function NewSupplierModal() {
             onChange={(e) => setForm({ ...form, lead_time_days: e.target.value })}
             placeholder="e.g. 5"
           />
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-error">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={close} disabled={isPending}>
               Cancel

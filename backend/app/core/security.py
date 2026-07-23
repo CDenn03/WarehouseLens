@@ -1,19 +1,26 @@
 """Auth & RBAC (Section 9).
 
-LEARNING AREA — Keycloak. The JWT validation below is a SCAFFOLD: the dependency
-returns a hardcoded fake payload so the rest of the app can be built and tested.
-The *enforcement* helpers further down (roles + warehouse scope) are real and are
-exercised by every router and agent tool — they just currently receive fake claims.
+Authentication uses Keycloak JWTs verified against the realm's JWKS endpoint.
+The dependency resolves identity via three sources (in priority order):
+  1. ``X-Debug-User`` header — tests and local dev only.
+  2. ``access_token`` cookie — BFF pattern, primary in production.
+  3. ``Authorization: Bearer`` header — Swagger UI / direct API callers.
+
+Enforcement helpers (roles + warehouse scope) are used by every router and
+agent tool.
 """
 
 from dataclasses import dataclass, field
 from uuid import UUID
 
-from fastapi import Depends, Header
+import httpx
+import jwt
+from fastapi import Depends, Header, HTTPException, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.exceptions import ForbiddenError
 from app.models.warehouse import UserWarehouseAssignment
@@ -45,44 +52,84 @@ class CurrentUser:
         return bool(self.roles & {ROLE_ADMIN, ROLE_AUDITOR})
 
 
+JWKS_CACHE: dict[str, dict] = {}
+
+
+async def _fetch_jwks() -> dict[str, dict]:
+    """Fetch Keycloak's public keys, cache by kid."""
+    settings = get_settings()
+    url = f"{settings.keycloak_issuer_url}/protocol/openid-connect/certs"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+    for key in resp.json()["keys"]:
+        JWKS_CACHE[key["kid"]] = key
+    return JWKS_CACHE
+
+
+def _verify_token(token: str, jwks: dict[str, dict]) -> dict:
+    """Decode + verify a Keycloak JWT. Returns the payload."""
+    settings = get_settings()
+    header = jwt.get_unverified_header(token)
+    kid = header["kid"]
+
+    if kid not in jwks:
+        raise jwt.InvalidTokenError("Unknown kid")
+
+    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(jwks[kid])
+    return jwt.decode(
+        token,
+        public_key,
+        algorithms=["RS256"],
+        audience=settings.keycloak_client_id,
+        issuer=settings.keycloak_issuer_url,
+    )
+
+
 async def get_current_user(
+    request: Request,
+    response: Response,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     x_debug_user: str | None = Header(default=None, include_in_schema=False),
 ) -> CurrentUser:
     """FastAPI dependency that resolves the caller's identity.
 
-    The Bearer security scheme (``bearer_scheme``) is what drives the
-    Swagger UI **Authorize** padlock button and the global
-    ``securitySchemes.HTTPBearer`` entry in the OpenAPI document.
-
-    Debug header
-    ~~~~~~~~~~~~
-    ``X-Debug-User`` ("sub:username:role1|role2") lets tests and the seed
-    script impersonate scoped users so RBAC logic is testable before
-    Keycloak exists.  It is hidden from the OpenAPI schema via
-    ``include_in_schema=False``.
-
-    Keycloak integration (TODO)
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    Real implementation outline:
-      1. Fetch Keycloak's JWKS from
-         {KEYCLOAK_ISSUER_URL}/protocol/openid-connect/certs and CACHE it.
-      2. Verify signature (RS256), ``iss``, ``exp``, and audience.
-      3. Extract realm roles from ``realm_access.roles`` (or client roles
-         from ``resource_access.<client>.roles``).
-      4. Return CurrentUser(sub, preferred_username, roles).
-
-    Until then: ``X-Debug-User`` or a hardcoded admin fallback.
+    Resolution order:
+      1. ``X-Debug-User`` header — tests and local dev (``sub:username:role1|role2``).
+      2. ``access_token`` cookie — BFF pattern, primary in production.
+      3. ``Authorization: Bearer`` header — Swagger UI / direct API callers.
+      4. No credentials → 401.
     """
-    # 1. Debug header — for tests and local development.
+    # 1. Debug header — tests and local development.
     if x_debug_user:
         sub, username, roles = x_debug_user.split(":", 2)
         return CurrentUser(sub=sub, username=username, roles=set(roles.split("|")))
 
-    # 2. JWT path — currently a scaffold, will validate against Keycloak.
-    # TODO: raise HTTPException(status_code=401) once Keycloak is live
-    #       and remove the hardcoded fallback.
-    return CurrentUser(sub="fake-sub-admin", username="dev-admin", roles={ROLE_ADMIN})
+    # 2. Cookie (BFF pattern — primary in production).
+    token = request.cookies.get("access_token")
+
+    # 3. Bearer header (Swagger fallback).
+    if not token and credentials:
+        token = credentials.credentials
+
+    if token:
+        jwks = JWKS_CACHE or await _fetch_jwks()
+        try:
+            payload = _verify_token(token, jwks)
+        except jwt.ExpiredSignatureError:
+            raise HTTPException(status_code=401, detail="Token expired")
+        except jwt.InvalidTokenError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+
+        roles = set(payload.get("realm_access", {}).get("roles", []))
+        return CurrentUser(
+            sub=payload["sub"],
+            username=payload.get("preferred_username", ""),
+            roles=roles,
+        )
+
+    # 4. No auth — 401.
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 
 def require_roles(*allowed: str):
