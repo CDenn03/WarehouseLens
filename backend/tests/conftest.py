@@ -4,6 +4,9 @@ design) + FastAPI TestClient with the get_db dependency overridden.
 Auth in tests goes through the X-Debug-User header the security scaffold
 accepts ("sub:username:perm1|perm2") — permission-based, not role-based.
 The permission tables must be seeded for require_permission() to resolve.
+
+Tenant scoping: tests seed a "default" tenant. All warehouses, roles,
+and assignments are scoped to that tenant.
 """
 
 import os
@@ -17,11 +20,13 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
+from app.core.permissions import ALL_PERMISSIONS, PERMISSION_CATEGORY
+from app.core.permissions.roles import ROLE_DEFINITIONS, ROLE_NAMES
 from app.main import app
 from app.models import (
     Base,
@@ -32,6 +37,7 @@ from app.models import (
     WarehouseStock,
 )
 from app.models.authorization import Permission, Role, RolePermission, UserRole
+from app.models.tenant import Tenant, User, UserTenant
 
 # ── Test user IDs ──────────────────────────────────────────────────────
 
@@ -46,85 +52,56 @@ AUDITOR = {"X-Debug-User": f"{AUDITOR_USER}:auditor:placeholder"}
 NAIROBI_MANAGER = {"X-Debug-User": f"{NAIROBI_MANAGER_USER}:nai.manager:placeholder"}
 
 
-# ── All permissions in the system ───────────────────────────────────────
-
-ALL_PERMISSIONS = [
-    ("warehouse.create", "Create warehouses", "warehouse"),
-    ("warehouse.assign_user", "Assign users to warehouses", "warehouse"),
-    ("warehouse.global", "Global warehouse scope", "warehouse"),
-    ("inventory.read", "View inventory", "inventory"),
-    ("inventory.write", "Create inventory transactions", "inventory"),
-    ("inventory.product.create", "Create products", "inventory"),
-    ("procurement.supplier.create", "Create suppliers", "procurement"),
-    ("procurement.order.create", "Create purchase orders", "procurement"),
-    ("procurement.order.receive", "Receive purchase orders", "procurement"),
-    ("outbound.sales_order.create", "Create sales orders", "outbound"),
-    ("outbound.transfer.create", "Create internal transfers", "outbound"),
-    ("outbound.pick_list.manage", "Generate and complete pick lists", "outbound"),
-    ("outbound.ship.manage", "Ship and deliver outbound requests", "outbound"),
-    ("dashboard.read", "View dashboard", "dashboard"),
-    ("forecast.read", "View forecasts", "forecast"),
-    ("agent.invoke", "Invoke the AI agent", "agent"),
-]
+def _seed_tenant(db_session) -> Tenant:
+    """Create the default tenant."""
+    tenant = Tenant(
+        name="default",
+        superuser_email="admin@test.local",
+    )
+    db_session.add(tenant)
+    db_session.flush()
+    return tenant
 
 
-def _seed_permissions_and_roles(db_session) -> dict[str, Role]:
+def _seed_users(db_session, tenant: Tenant):
+    """Create user rows + tenant memberships for all test users."""
+    for sub in [ADMIN_USER, AUDITOR_USER, NAIROBI_MANAGER_USER]:
+        db_session.add(User(id=sub, email=f"{sub}@test.local", username=sub))
+        db_session.add(UserTenant(user_id=sub, tenant_id=tenant.id))
+    db_session.flush()
+
+
+def _seed_permissions_and_roles(db_session, tenant_id) -> dict[str, Role]:
     """Seed permission catalog, roles, role-permission mappings, and test
     user-role assignments. Returns the role objects keyed by slug."""
-    for pid, desc, cat in ALL_PERMISSIONS:
-        db_session.add(Permission(id=pid, description=desc, category=cat))
+    # Seed permissions from the code-level catalog.
+    for pid, desc in ALL_PERMISSIONS.items():
+        db_session.add(Permission(id=pid, description=desc, category=PERMISSION_CATEGORY[pid]))
     db_session.flush()
 
-    admin_role = Role(slug="admin", name="Administrator")
-    wm_role = Role(slug="warehouse_manager", name="Warehouse Manager")
-    po_role = Role(slug="procurement_officer", name="Procurement Officer")
-    auditor_role = Role(slug="auditor", name="Auditor")
-    db_session.add_all([admin_role, wm_role, po_role, auditor_role])
+    # Seed roles.
+    roles: dict[str, Role] = {}
+    for slug in ROLE_DEFINITIONS:
+        db_session.add(Role(slug=slug, name=ROLE_NAMES[slug]))
     db_session.flush()
 
-    # Admin → all permissions.
-    for pid, _, _ in ALL_PERMISSIONS:
-        db_session.add(RolePermission(role_id=admin_role.id, permission_id=pid))
-
-    # Warehouse Manager: inventory + outbound + dashboard + forecast + agent (scoped, no warehouse.global).
-    wm_perms = [
-        "inventory.read", "inventory.write", "inventory.product.create",
-        "outbound.sales_order.create", "outbound.transfer.create",
-        "outbound.pick_list.manage", "outbound.ship.manage",
-        "dashboard.read", "forecast.read", "agent.invoke",
-    ]
-    for pid in wm_perms:
-        db_session.add(RolePermission(role_id=wm_role.id, permission_id=pid))
-
-    # Procurement Officer: procurement + inventory.read + inventory.product.create + dashboard + forecast + agent.
-    po_perms = [
-        "inventory.read", "inventory.product.create",
-        "procurement.supplier.create", "procurement.order.create",
-        "procurement.order.receive",
-        "dashboard.read", "forecast.read", "agent.invoke",
-    ]
-    for pid in po_perms:
-        db_session.add(RolePermission(role_id=po_role.id, permission_id=pid))
-
-    # Auditor: read-only + warehouse.global.
-    for pid in ["inventory.read", "dashboard.read", "forecast.read", "warehouse.global"]:
-        db_session.add(RolePermission(role_id=auditor_role.id, permission_id=pid))
+    # Look up role objects and seed role_permissions from ROLE_DEFINITIONS.
+    for slug, perms in ROLE_DEFINITIONS.items():
+        role = db_session.query(Role).filter(Role.slug == slug).one()
+        roles[slug] = role
+        for pid in perms:
+            db_session.add(RolePermission(role_id=role.id, permission_id=pid))
     db_session.flush()
 
-    # User-role assignments.
+    # User-role assignments (scoped to tenant).
     db_session.add_all([
-        UserRole(user_id=ADMIN_USER, role_id=admin_role.id),
-        UserRole(user_id=NAIROBI_MANAGER_USER, role_id=wm_role.id),
-        UserRole(user_id=AUDITOR_USER, role_id=auditor_role.id),
+        UserRole(user_id=ADMIN_USER, role_id=roles["admin"].id, tenant_id=tenant_id),
+        UserRole(user_id=NAIROBI_MANAGER_USER, role_id=roles["warehouse_manager"].id, tenant_id=tenant_id),
+        UserRole(user_id=AUDITOR_USER, role_id=roles["auditor"].id, tenant_id=tenant_id),
     ])
     db_session.flush()
 
-    return {
-        "admin": admin_role,
-        "warehouse_manager": wm_role,
-        "procurement_officer": po_role,
-        "auditor": auditor_role,
-    }
+    return roles
 
 
 @pytest.fixture()
@@ -154,11 +131,14 @@ def client(db_session):
 def seeded(db_session):
     """Two warehouses, two products (one with differing reorder points per
     warehouse — Section 12), one supplier, stock, and a scoped user assigned
-    to Nairobi only. Also seeds permission tables so require_permission() works."""
-    _seed_permissions_and_roles(db_session)
+    to Nairobi only. Also seeds permission and tenant tables so
+    require_permission() and resolve_tenant_id() work."""
+    tenant = _seed_tenant(db_session)
+    _seed_users(db_session, tenant)
+    roles = _seed_permissions_and_roles(db_session, tenant.id)
 
-    nairobi = Warehouse(name="Nairobi Central")
-    mombasa = Warehouse(name="Mombasa Port")
+    nairobi = Warehouse(name="Nairobi Central", tenant_id=tenant.id)
+    mombasa = Warehouse(name="Mombasa Port", tenant_id=tenant.id)
     widget = Product(sku="SKU-1", name="Widget", category="Parts", unit_cost=Decimal("10.00"))
     gadget = Product(sku="SKU-2", name="Gadget", category="Parts", unit_cost=Decimal("25.00"))
     supplier = Supplier(name="Acme", lead_time_days=5, contact_email="a@acme.test")
@@ -188,6 +168,8 @@ def seeded(db_session):
         "widget": widget,
         "gadget": gadget,
         "supplier": supplier,
+        "tenant": tenant,
+        "roles": roles,
     }
 
 

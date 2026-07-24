@@ -10,19 +10,24 @@ Covers:
 
 import time
 import uuid
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
+from app.core.permissions import ALL_PERMISSIONS, PERMISSION_CATEGORY
+from app.core.permissions.agent import AGENT_INVOKE
+from app.core.permissions.dashboard import DASHBOARD_READ
+from app.core.permissions.forecast import FORECAST_READ
+from app.core.permissions.roles import ROLE_DEFINITIONS, ROLE_NAMES
 from app.core.security import _JWKS_TTL_SECONDS, _jwks_cache, _JWKSCache
 from app.main import app
 from app.models import Base, Product, Warehouse, WarehouseStock
 from app.models.authorization import Permission, Role, RolePermission, UserRole
+from app.models.tenant import Tenant, User, UserTenant
 from app.services.permission_service import resolve_permissions
 
 # ── Helpers ────────────────────────────────────────────────────────────
@@ -38,49 +43,41 @@ def _headers(user_id: str, username: str) -> dict[str, str]:
 
 def _seed_harden_perms(db_session) -> dict[str, Role]:
     """Seed permission catalog and roles for hardening tests."""
-    all_perms = [
-        ("warehouse.create", "Create warehouses", "warehouse"),
-        ("warehouse.assign_user", "Assign users", "warehouse"),
-        ("warehouse.global", "Global scope", "warehouse"),
-        ("inventory.read", "Read inventory", "inventory"),
-        ("inventory.write", "Write inventory", "inventory"),
-        ("inventory.product.create", "Create products", "inventory"),
-        ("procurement.supplier.create", "Create suppliers", "procurement"),
-        ("procurement.order.create", "Create POs", "procurement"),
-        ("procurement.order.receive", "Receive POs", "procurement"),
-        ("outbound.sales_order.create", "Create SOs", "outbound"),
-        ("outbound.transfer.create", "Create transfers", "outbound"),
-        ("outbound.pick_list.manage", "Manage picks", "outbound"),
-        ("outbound.ship.manage", "Manage shipping", "outbound"),
-        ("dashboard.read", "View dashboard", "dashboard"),
-        ("forecast.read", "View forecasts", "forecast"),
-        ("agent.invoke", "Invoke AI agent", "agent"),
-    ]
-    for pid, desc, cat in all_perms:
-        db_session.add(Permission(id=pid, description=desc, category=cat))
+    # Seed tenant + users.
+    tenant = Tenant(name="default", superuser_email="admin@test.local")
+    db_session.add(tenant)
+    db_session.flush()
+    for sub in [ADMIN_USER, AUDITOR_USER, NOCREDS_USER]:
+        db_session.add(User(id=sub, email=f"{sub}@test.local", username=sub))
+        db_session.add(UserTenant(user_id=sub, tenant_id=tenant.id))
     db_session.flush()
 
-    admin_role = Role(slug="admin", name="Administrator")
-    auditor_role = Role(slug="auditor", name="Auditor")
-    db_session.add_all([admin_role, auditor_role])
+    # Seed permissions from the code-level catalog.
+    for pid, desc in ALL_PERMISSIONS.items():
+        db_session.add(Permission(id=pid, description=desc, category=PERMISSION_CATEGORY[pid]))
     db_session.flush()
 
-    # Admin → all permissions.
-    for pid, _, _ in all_perms:
-        db_session.add(RolePermission(role_id=admin_role.id, permission_id=pid))
-
-    # Auditor → read-only + dashboard.read + forecast.read (no agent.invoke).
-    for pid in ["inventory.read", "dashboard.read", "forecast.read", "warehouse.global"]:
-        db_session.add(RolePermission(role_id=auditor_role.id, permission_id=pid))
+    # Seed roles from ROLE_DEFINITIONS.
+    roles: dict[str, Role] = {}
+    for slug in ROLE_DEFINITIONS:
+        db_session.add(Role(slug=slug, name=ROLE_NAMES[slug]))
     db_session.flush()
 
+    for slug, perms in ROLE_DEFINITIONS.items():
+        role = db_session.query(Role).filter(Role.slug == slug).one()
+        roles[slug] = role
+        for pid in perms:
+            db_session.add(RolePermission(role_id=role.id, permission_id=pid))
+    db_session.flush()
+
+    # Assign users to roles.
     db_session.add_all([
-        UserRole(user_id=ADMIN_USER, role_id=admin_role.id),
-        UserRole(user_id=AUDITOR_USER, role_id=auditor_role.id),
+        UserRole(user_id=ADMIN_USER, role_id=roles["admin"].id, tenant_id=tenant.id),
+        UserRole(user_id=AUDITOR_USER, role_id=roles["auditor"].id, tenant_id=tenant.id),
     ])
     db_session.flush()
 
-    return {"admin": admin_role, "auditor": auditor_role}
+    return {**roles, "tenant": tenant}
 
 
 # ── Fixtures ───────────────────────────────────────────────────────────
@@ -112,7 +109,7 @@ def seed_harden(db_session):
     """Seed perms + warehouses + products for dashboard/forecast/agent tests."""
     roles = _seed_harden_perms(db_session)
 
-    nairobi = Warehouse(name="Nairobi Central")
+    nairobi = Warehouse(name="Nairobi Central", tenant_id=roles["tenant"].id)
     widget = Product(sku="SKU-H1", name="Widget", category="Parts", unit_cost="10.00")
     db_session.add_all([nairobi, widget])
     db_session.flush()
@@ -130,17 +127,14 @@ def seed_harden(db_session):
 
 class TestDashboardPermissionProtection:
     def test_dashboard_kpis_allowed_for_admin(self, client, seed_harden):
-        """Admin has dashboard.read → 200."""
         resp = client.get("/api/v1/dashboard/kpis", headers=_headers(ADMIN_USER, "admin"))
         assert resp.status_code == 200
 
     def test_dashboard_kpis_denied_for_nocreds(self, client, seed_harden):
-        """User with no permissions → 403."""
         resp = client.get("/api/v1/dashboard/kpis", headers=_headers(NOCREDS_USER, "nocreds"))
         assert resp.status_code == 403
 
     def test_dashboard_stock_trend_allowed_for_auditor(self, client, seed_harden):
-        """Auditor has dashboard.read → 200."""
         resp = client.get(
             "/api/v1/dashboard/charts/stock-trend",
             headers=_headers(AUDITOR_USER, "auditor"),
@@ -171,7 +165,6 @@ class TestDashboardPermissionProtection:
 
 class TestForecastPermissionProtection:
     def test_forecast_denied_for_nocreds(self, client, seed_harden):
-        """User with no permissions → 403 on forecast endpoint."""
         product_id = seed_harden["widget"].id
         warehouse_id = seed_harden["nairobi"].id
         resp = client.get(
@@ -182,7 +175,6 @@ class TestForecastPermissionProtection:
         assert resp.status_code == 403
 
     def test_forecast_allowed_for_admin(self, client, seed_harden):
-        """Admin has forecast.read + warehouse.global → 200."""
         product_id = seed_harden["widget"].id
         warehouse_id = seed_harden["nairobi"].id
         resp = client.get(
@@ -199,7 +191,6 @@ class TestForecastPermissionProtection:
 
 class TestAgentEndpointProtection:
     def test_agent_denied_for_auditor(self, client, seed_harden):
-        """Auditor has no agent.invoke → 403."""
         resp = client.post(
             "/api/v1/agent/query",
             json={"question": "What is inventory?"},
@@ -208,7 +199,6 @@ class TestAgentEndpointProtection:
         assert resp.status_code == 403
 
     def test_agent_denied_for_nocreds(self, client, seed_harden):
-        """User with no permissions → 403."""
         resp = client.post(
             "/api/v1/agent/query",
             json={"question": "What is inventory?"},
@@ -217,14 +207,11 @@ class TestAgentEndpointProtection:
         assert resp.status_code == 403
 
     def test_agent_allowed_for_admin(self, client, seed_harden):
-        """Admin has agent.invoke → 200 (or valid upstream response)."""
         resp = client.post(
             "/api/v1/agent/query",
             json={"question": "What is inventory?"},
             headers=_headers(ADMIN_USER, "admin"),
         )
-        # Admin has agent.invoke; result depends on the planner service.
-        # At minimum, it should NOT be 403.
         assert resp.status_code != 403, f"Admin was denied agent.invoke: {resp.text}"
 
 
@@ -234,28 +221,23 @@ class TestAgentEndpointProtection:
 
 class TestJWKSCacheHardening:
     def test_jwks_cache_has_ttl(self):
-        """Cache starts empty and has a defined TTL."""
         cache = _JWKSCache()
         assert cache.keys == {}
         assert not cache.is_valid
 
     def test_jwks_cache_valid_after_store(self, db_session):
-        """After storing keys, cache is valid within TTL."""
         cache = _JWKSCache()
         cache.store({"kid-1": {"kid": "kid-1", "kty": "RSA"}})
         assert cache.is_valid
         assert "kid-1" in cache.keys
 
     def test_jwks_cache_invalid_after_ttl(self):
-        """Cache becomes invalid after TTL expires."""
         cache = _JWKSCache()
         cache.store({"kid-1": {"kid": "kid-1"}})
-        # Simulate TTL expiry by setting _fetched_at to the past.
         cache._fetched_at = time.time() - (_JWKS_TTL_SECONDS + 1)
         assert not cache.is_valid
 
     def test_jwks_cache_invalidate_clears_keys(self):
-        """invalidate() clears all cached keys."""
         cache = _JWKSCache()
         cache.store({"kid-1": {"kid": "kid-1"}})
         cache.invalidate()
@@ -263,24 +245,12 @@ class TestJWKSCacheHardening:
         assert not cache.is_valid
 
     def test_unknown_kid_triggers_refresh(self, client, db_session, seed_harden):
-        """
-        If the JWKS cache contains keys but the JWT has an unknown kid,
-        the security layer refreshes the cache once and retries.  If
-        still unknown after refresh, the request is rejected (401).
-        """
-        # Pre-populate cache with a stale key.
         _jwks_cache.store({"stale-kid": {"kid": "stale-kid"}})
-
-        # Send a request with no auth → 401 (not an unknown-kid path, but
-        # confirms the endpoint is reachable after cache manipulation).
         resp = client.get("/api/v1/dashboard/kpis")
         assert resp.status_code == 401
-
-        # Clean up cache.
         _jwks_cache.invalidate()
 
     def test_jwks_cache_rotation_replaces_keys(self):
-        """When new keys are stored, they replace old ones."""
         cache = _JWKSCache()
         cache.store({"kid-v1": {"kid": "kid-v1"}})
         cache.store({"kid-v2": {"kid": "kid-v2"}})
@@ -293,44 +263,16 @@ class TestJWKSCacheHardening:
 # ══════════════════════════════════════════════════════════════════════
 
 class TestBFFRateLimiting:
-    """BFF rate limiting is enforced by the Next.js middleware (middleware.ts).
-
-    These tests document the expected behavior and verify the backend
-    accepts requests that would pass the middleware checks.
-    """
-
     def test_authenticated_request_allowed(self, client, seed_harden):
-        """Authenticated requests within rate limit → pass through to backend."""
         resp = client.get(
             "/api/v1/dashboard/kpis",
             headers=_headers(ADMIN_USER, "admin"),
         )
-        # 200 = authenticated user has dashboard.read permission
         assert resp.status_code == 200
 
     def test_unauthenticated_request_rejected_at_backend(self, client, seed_harden):
-        """Requests without auth header → 401 from backend (middleware would also reject)."""
         resp = client.get("/api/v1/dashboard/kpis")
         assert resp.status_code == 401
-
-    def test_rate_limit_headers_documented(self):
-        """Middleware returns 429 with Retry-After when rate limit exceeded.
-
-        Implementation: frontend/src/middleware.ts
-        - AUTH_LIMIT = 60 req/min (authenticated)
-        - UNAUTH_LIMIT = 20 req/min (unauthenticated)
-        - Response: { error: "rate_limit_exceeded", retry_after: <seconds> }
-        """
-        pass  # Documented; enforced by Next.js middleware.
-
-    def test_request_size_limit_documented(self):
-        """Middleware rejects bodies > 10 MB with 413.
-
-        Implementation: frontend/src/middleware.ts
-        - Content-Length header checked against 10 * 1024 * 1024
-        - Response: { error: "request_too_large", message: "Maximum request body size is 10 MB" }
-        """
-        pass  # Documented; enforced by Next.js middleware.
 
 
 # ══════════════════════════════════════════════════════════════════════
@@ -339,7 +281,6 @@ class TestBFFRateLimiting:
 
 class TestObservabilityLogging:
     def test_permission_check_allowed_emits_log(self, client, seed_harden, caplog):
-        """When require_permission succeeds, a 'permission check' log is emitted."""
         import logging
         with caplog.at_level(logging.INFO, logger="app.core.security"):
             resp = client.get(
@@ -351,11 +292,10 @@ class TestObservabilityLogging:
         assert len(matching) >= 1, "No 'permission check' log emitted for allowed request"
         last = matching[-1]
         assert last.decision == "allow"
-        assert last.permission == "dashboard.read"
+        assert last.permission == DASHBOARD_READ
         assert last.user_id == ADMIN_USER
 
     def test_permission_check_denied_emits_log(self, client, seed_harden, caplog):
-        """When require_permission denies, a 'permission check' log is emitted with deny."""
         import logging
         with caplog.at_level(logging.INFO, logger="app.core.security"):
             resp = client.get(
@@ -367,10 +307,9 @@ class TestObservabilityLogging:
         assert len(matching) >= 1, "No 'permission check' log emitted for denied request"
         last = matching[-1]
         assert last.decision == "deny"
-        assert last.permission == "dashboard.read"
+        assert last.permission == DASHBOARD_READ
 
     def test_correlation_id_propagated_in_logs(self, client, seed_harden, caplog):
-        """Request ID is included in log records when set."""
         import logging
         request_id = f"test-{uuid.uuid4().hex[:8]}"
         with caplog.at_level(logging.INFO, logger="app.core.security"):
@@ -392,21 +331,17 @@ class TestObservabilityLogging:
 
 class TestPermissionResolutionEdgeCases:
     def test_auditor_lacks_agent_invoke(self, db_session, seed_harden):
-        """Auditor role does NOT have agent.invoke."""
-        perms = resolve_permissions(db_session, AUDITOR_USER)
-        assert "agent.invoke" not in perms
+        perms = resolve_permissions(db_session, AUDITOR_USER, seed_harden["tenant"].id)
+        assert AGENT_INVOKE not in perms
 
     def test_admin_has_all_permissions(self, db_session, seed_harden):
-        """Admin has all 16 seeded permissions."""
-        perms = resolve_permissions(db_session, ADMIN_USER)
-        assert len(perms) >= 16
+        perms = resolve_permissions(db_session, ADMIN_USER, seed_harden["tenant"].id)
+        assert len(perms) >= len(ALL_PERMISSIONS) - 2  # admin excludes IAM perms
 
     def test_unknown_user_has_no_permissions(self, db_session, seed_harden):
-        """User not in any role gets empty permissions."""
-        assert resolve_permissions(db_session, "nonexistent-sub") == set()
+        assert resolve_permissions(db_session, "nonexistent-sub", seed_harden["tenant"].id) == set()
 
     def test_auditor_has_dashboard_and_forecast(self, db_session, seed_harden):
-        """Auditor has dashboard.read and forecast.read."""
-        perms = resolve_permissions(db_session, AUDITOR_USER)
-        assert "dashboard.read" in perms
-        assert "forecast.read" in perms
+        perms = resolve_permissions(db_session, AUDITOR_USER, seed_harden["tenant"].id)
+        assert DASHBOARD_READ in perms
+        assert FORECAST_READ in perms

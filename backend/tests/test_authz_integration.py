@@ -20,14 +20,23 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
+from app.core.permissions import ALL_PERMISSIONS, PERMISSION_CATEGORY
+from app.core.permissions.inventory import INVENTORY_READ, INVENTORY_WRITE
+from app.core.permissions.procurement import (
+    PROCUREMENT_ORDER_CREATE,
+    PROCUREMENT_ORDER_RECEIVE,
+)
+from app.core.permissions.roles import ROLE_DEFINITIONS, ROLE_NAMES
+from app.core.permissions.warehouse import WAREHOUSE_GLOBAL
 from app.main import app
-from app.models import Base, Product, Supplier, Warehouse, WarehouseStock, UserWarehouseAssignment
+from app.models import Base, Product, Supplier, UserWarehouseAssignment, Warehouse
 from app.models.authorization import (
     Permission,
     Role,
     RolePermission,
     UserRole,
 )
+from app.models.tenant import Tenant, User, UserTenant
 from app.services.permission_service import resolve_permissions
 
 # ── Helpers ────────────────────────────────────────────────────────────
@@ -78,56 +87,46 @@ def client(db_session):
 
 @pytest.fixture()
 def seed_auth(db_session):
-    """Seed permission tables, roles, role→permissions, user→roles, warehouse, supplier,
-    and a product so the procurement/inventory endpoints have valid FK targets."""
+    """Seed permission tables, roles, role→permissions, user→roles, tenant,
+    warehouse, supplier, and a product so the procurement/inventory endpoints
+    have valid FK targets."""
+    # ── Tenant ─────────────────────────────────────────────────────────
+    tenant = Tenant(name="default", superuser_email="admin@test.local")
+    db_session.add(tenant)
+    db_session.flush()
+
+    # ── Users ──────────────────────────────────────────────────────────
+    for sub in [ADMIN_USER, PROC_USER]:
+        db_session.add(User(id=sub, email=f"{sub}@test.local", username=sub))
+        db_session.add(UserTenant(user_id=sub, tenant_id=tenant.id))
+    db_session.flush()
+
     # ── Permissions ────────────────────────────────────────────────────
-    all_perms = [
-        ("procurement.order.create", "Create POs", "procurement"),
-        ("procurement.order.receive", "Receive POs", "procurement"),
-        ("procurement.supplier.create", "Create suppliers", "procurement"),
-        ("inventory.write", "Write inventory", "inventory"),
-        ("inventory.read", "Read inventory", "inventory"),
-        ("inventory.product.create", "Create products", "inventory"),
-        ("warehouse.create", "Create warehouses", "warehouse"),
-        ("warehouse.assign_user", "Assign users", "warehouse"),
-        ("warehouse.global", "Global scope", "warehouse"),
-        ("outbound.sales_order.create", "Create SOs", "outbound"),
-        ("outbound.transfer.create", "Create transfers", "outbound"),
-        ("outbound.pick_list.manage", "Manage picks", "outbound"),
-        ("outbound.ship.manage", "Manage shipping", "outbound"),
-        ("dashboard.read", "View dashboard", "dashboard"),
-        ("forecast.read", "View forecasts", "forecast"),
-        ("agent.invoke", "Invoke AI agent", "agent"),
-    ]
-    for pid, desc, cat in all_perms:
-        db_session.add(Permission(id=pid, description=desc, category=cat))
+    for pid, desc in ALL_PERMISSIONS.items():
+        db_session.add(Permission(id=pid, description=desc, category=PERMISSION_CATEGORY[pid]))
     db_session.flush()
 
     # ── Roles ──────────────────────────────────────────────────────────
-    admin_role = Role(slug="admin", name="Administrator")
-    proc_role = Role(slug="procurement_officer", name="Procurement Officer")
-    db_session.add_all([admin_role, proc_role])
+    for slug in ROLE_DEFINITIONS:
+        db_session.add(Role(slug=slug, name=ROLE_NAMES[slug]))
     db_session.flush()
 
-    # Admin → all permissions.
-    for pid, _, _ in all_perms:
-        db_session.add(RolePermission(role_id=admin_role.id, permission_id=pid))
-
-    # Procurement officer → procurement + inventory.read + inventory.product.create + warehouse.global.
-    for pid in ["procurement.order.create", "procurement.order.receive",
-                "procurement.supplier.create", "inventory.read", "inventory.product.create",
-                "warehouse.global"]:
-        db_session.add(RolePermission(role_id=proc_role.id, permission_id=pid))
+    for slug, perms in ROLE_DEFINITIONS.items():
+        role = db_session.query(Role).filter(Role.slug == slug).one()
+        for pid in perms:
+            db_session.add(RolePermission(role_id=role.id, permission_id=pid))
     db_session.flush()
 
-    # ── User → Role assignments (DB-driven permission source) ──────────
+    # ── User → Role assignments (DB-driven, tenant-scoped) ────────────
+    admin_role = db_session.query(Role).filter(Role.slug == "admin").one()
+    proc_role = db_session.query(Role).filter(Role.slug == "procurement_officer").one()
     db_session.add_all([
-        UserRole(user_id=ADMIN_USER, role_id=admin_role.id),
-        UserRole(user_id=PROC_USER, role_id=proc_role.id),
+        UserRole(user_id=ADMIN_USER, role_id=admin_role.id, tenant_id=tenant.id),
+        UserRole(user_id=PROC_USER, role_id=proc_role.id, tenant_id=tenant.id),
     ])
 
     # ── Warehouse, supplier, product (FK targets) ──────────────────────
-    nairobi = Warehouse(name="Nairobi Central")
+    nairobi = Warehouse(name="Nairobi Central", tenant_id=tenant.id)
     supplier = Supplier(name="Acme", lead_time_days=5, contact_email="a@acme.test")
     product = Product(sku="SKU-TEST", name="Test Widget", category="Parts", unit_cost=Decimal("10.00"))
     db_session.add_all([nairobi, supplier, product])
@@ -139,6 +138,7 @@ def seed_auth(db_session):
         "product": product,
         "admin_role": admin_role,
         "proc_role": proc_role,
+        "tenant": tenant,
     }
 
 
@@ -196,9 +196,9 @@ class TestScenarioB_Denied:
         auditor_role = Role(slug="auditor_test", name="Auditor Test")
         db_session.add(auditor_role)
         db_session.flush()
-        for pid in ["inventory.read", "dashboard.read", "forecast.read"]:
+        for pid in [INVENTORY_READ, "dashboard.read", "forecast.read"]:
             db_session.add(RolePermission(role_id=auditor_role.id, permission_id=pid))
-        db_session.add(UserRole(user_id=unknown_id, role_id=auditor_role.id))
+        db_session.add(UserRole(user_id=unknown_id, role_id=auditor_role.id, tenant_id=seed_auth["tenant"].id))
         db_session.commit()
 
         resp = client.post(
@@ -238,14 +238,19 @@ class TestScenarioC_Revocation:
         3. Same user (same debug header) → next request is immediately 403.
         """
         user_id = f"sub-revoke-{uuid.uuid4().hex[:8]}"
+        tenant_id = seed_auth["tenant"].id
+
+        db_session.add(User(id=user_id, email=f"{user_id}@test.local", username=user_id))
+        db_session.add(UserTenant(user_id=user_id, tenant_id=tenant_id))
+        db_session.flush()
 
         # Step 1: create a temp role with the permission, assign user.
         temp_role = Role(slug=f"temp_{user_id}", name="Temp Role")
         db_session.add(temp_role)
         db_session.flush()
-        db_session.add(RolePermission(role_id=temp_role.id, permission_id="procurement.order.create"))
-        db_session.add(RolePermission(role_id=temp_role.id, permission_id="warehouse.global"))
-        db_session.add(UserRole(user_id=user_id, role_id=temp_role.id))
+        db_session.add(RolePermission(role_id=temp_role.id, permission_id=PROCUREMENT_ORDER_CREATE))
+        db_session.add(RolePermission(role_id=temp_role.id, permission_id=WAREHOUSE_GLOBAL))
+        db_session.add(UserRole(user_id=user_id, role_id=temp_role.id, tenant_id=tenant_id))
         db_session.commit()
 
         resp = client.post(
@@ -274,14 +279,16 @@ class TestScenarioC_Revocation:
 
 
 class TestScenarioD_WarehouseScope:
-    def _seed_warehouse_user(self, db_session, user_id: str, role_slug: str, perms: list[str], warehouse: Warehouse):
+    def _seed_warehouse_user(self, db_session, user_id: str, role_slug: str, perms: list[str], warehouse: Warehouse, tenant_id):
         """Seed a user into DB with given permissions + warehouse assignment."""
+        db_session.add(User(id=user_id, email=f"{user_id}@test.local", username=user_id))
+        db_session.add(UserTenant(user_id=user_id, tenant_id=tenant_id))
         role = Role(slug=role_slug, name=role_slug)
         db_session.add(role)
         db_session.flush()
         for pid in perms:
             db_session.add(RolePermission(role_id=role.id, permission_id=pid))
-        db_session.add(UserRole(user_id=user_id, role_id=role.id))
+        db_session.add(UserRole(user_id=user_id, role_id=role.id, tenant_id=tenant_id))
         db_session.add(UserWarehouseAssignment(user_id=user_id, warehouse_id=warehouse.id))
         db_session.commit()
         return role
@@ -289,14 +296,15 @@ class TestScenarioD_WarehouseScope:
     def test_scoped_user_cannot_write_unassigned_warehouse(self, client, seed_auth, db_session):
         """User with inventory.write but NOT assigned to a warehouse is rejected."""
         user_id = f"sub-scoped-{uuid.uuid4().hex[:8]}"
-        other_warehouse = Warehouse(name="Mombasa Port")
+        tenant_id = seed_auth["tenant"].id
+        other_warehouse = Warehouse(name="Mombasa Port", tenant_id=tenant_id)
         db_session.add(other_warehouse)
         db_session.flush()
 
         # User is assigned to OTHER warehouse only.
         self._seed_warehouse_user(
             db_session, user_id, "scoped_wh_user",
-            ["inventory.write"], other_warehouse,
+            [INVENTORY_WRITE], other_warehouse, tenant_id,
         )
 
         resp = client.post(
@@ -314,12 +322,15 @@ class TestScenarioD_WarehouseScope:
     def test_global_user_can_write_any_warehouse(self, client, seed_auth, db_session):
         """User with inventory.write + warehouse.global can write anywhere."""
         user_id = f"sub-global-{uuid.uuid4().hex[:8]}"
+        tenant_id = seed_auth["tenant"].id
+        db_session.add(User(id=user_id, email=f"{user_id}@test.local", username=user_id))
+        db_session.add(UserTenant(user_id=user_id, tenant_id=tenant_id))
         role = Role(slug=f"global_role_{user_id}", name="Global Role")
         db_session.add(role)
         db_session.flush()
-        for pid in ["inventory.write", "warehouse.global"]:
+        for pid in [INVENTORY_WRITE, WAREHOUSE_GLOBAL]:
             db_session.add(RolePermission(role_id=role.id, permission_id=pid))
-        db_session.add(UserRole(user_id=user_id, role_id=role.id))
+        db_session.add(UserRole(user_id=user_id, role_id=role.id, tenant_id=tenant_id))
         db_session.commit()
 
         resp = client.post(
@@ -337,9 +348,10 @@ class TestScenarioD_WarehouseScope:
     def test_warehouse_list_filters_by_assignment(self, client, seed_auth, db_session):
         """List endpoint returns data for assigned warehouses."""
         user_id = f"sub-list-{uuid.uuid4().hex[:8]}"
+        tenant_id = seed_auth["tenant"].id
         self._seed_warehouse_user(
             db_session, user_id, "list_role",
-            ["inventory.read"], seed_auth["nairobi"],
+            [INVENTORY_READ], seed_auth["nairobi"], tenant_id,
         )
 
         resp = client.get("/api/v1/products", headers=_headers(user_id, "list.user"))
@@ -368,7 +380,7 @@ class TestScenarioE_AuditLogging:
 
         rows = db_session.execute(
             text("SELECT * FROM access_decisions WHERE user_id = :uid AND permission_id = :pid"),
-            {"uid": PROC_USER, "pid": "procurement.order.receive"},
+            {"uid": PROC_USER, "pid": PROCUREMENT_ORDER_RECEIVE},
         ).fetchall()
         assert len(rows) >= 1, "access_decisions row not found after receive_purchase_order"
 
@@ -383,17 +395,17 @@ class TestScenarioE_AuditLogging:
 
 class TestPermissionResolution:
     def test_resolve_permissions_returns_correct_set(self, db_session, seed_auth):
-        perms = resolve_permissions(db_session, PROC_USER)
-        assert "procurement.order.create" in perms
-        assert "procurement.order.receive" in perms
-        assert "inventory.write" not in perms
+        perms = resolve_permissions(db_session, PROC_USER, seed_auth["tenant"].id)
+        assert PROCUREMENT_ORDER_CREATE in perms
+        assert PROCUREMENT_ORDER_RECEIVE in perms
+        assert INVENTORY_WRITE not in perms
 
     def test_resolve_permissions_empty_for_unknown_user(self, db_session, seed_auth):
-        assert resolve_permissions(db_session, "unknown-user-sub") == set()
+        assert resolve_permissions(db_session, "unknown-user-sub", seed_auth["tenant"].id) == set()
 
     def test_admin_has_all_permissions(self, db_session, seed_auth):
-        perms = resolve_permissions(db_session, ADMIN_USER)
-        assert len(perms) >= 16  # 16 seeded permissions
+        perms = resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)
+        assert len(perms) >= len(ALL_PERMISSIONS) - 2  # admin excludes IAM perms
 
     def test_warehouse_global_for_admin(self, db_session, seed_auth):
-        assert "warehouse.global" in resolve_permissions(db_session, ADMIN_USER)
+        assert WAREHOUSE_GLOBAL in resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)
