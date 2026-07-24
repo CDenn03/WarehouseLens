@@ -23,6 +23,9 @@ class PurchaseOrder(Base, UuidPkMixin, CreatedAtMixin):
     order_date: Mapped[date] = mapped_column(Date)
     expected_delivery_date: Mapped[date | None] = mapped_column(Date)
     actual_delivery_date: Mapped[date | None] = mapped_column(Date)
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )
 
     items: Mapped[list["PurchaseOrderItem"]] = relationship(
         back_populates="purchase_order", cascade="all, delete-orphan", lazy="selectin"

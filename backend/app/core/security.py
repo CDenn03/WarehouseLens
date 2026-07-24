@@ -8,34 +8,40 @@ The dependency resolves identity via two sources (in priority order):
 Authorization is permission-based: ``require_permission()`` resolves the
 caller's permissions from the database and enforces deny-by-default.
 
+Tenant scoping: every user belongs to one or more tenants.  Permissions are
+resolved within the current tenant.  ``warehouse.global`` means "all warehouses
+within my tenant," never across tenants.
+
 JWKS cache has a 15-minute TTL and handles key rotation automatically.
 """
 
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from uuid import UUID
 
 import httpx
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
-from app.core.correlation import get_request_id
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.correlation import get_request_id
 from app.core.database import get_db
-from app.core.exceptions import ForbiddenError
-from app.models.warehouse import UserWarehouseAssignment
+from app.core.exceptions import ForbiddenError, NotFoundError
+from app.models.warehouse import UserWarehouseAssignment, Warehouse
+
+from app.core.permissions.warehouse import WAREHOUSE_GLOBAL
 
 logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
-# Permissions that grant global (all-warehouse) scope.
-_GLOBAL_PERMISSIONS = {"warehouse.global"}
+# Permissions that grant global (all-warehouse) scope within a tenant.
+_GLOBAL_PERMISSIONS = {WAREHOUSE_GLOBAL}
 
 # JWKS cache TTL in seconds (15 minutes).
 _JWKS_TTL_SECONDS = 15 * 60
@@ -46,13 +52,15 @@ class CurrentUser:
     """What the backend trusts about the caller, extracted from the Keycloak JWT.
 
     Fields:
-      sub:      stable Keycloak subject identifier
-      username: human-readable preferred_username
+      sub:        stable Keycloak subject identifier
+      username:   human-readable preferred_username
+      tenant_id:  resolved from user_tenants — the current tenant context
       permissions: resolved from the DB by require_permission() — never from JWT
     """
 
     sub: str
     username: str
+    tenant_id: UUID | None = None
     permissions: set[str] = field(default_factory=set)
 
 
@@ -123,25 +131,202 @@ def _verify_token(token: str, jwks: dict[str, dict]) -> dict:
     )
 
 
+# ── Tenant resolution ──────────────────────────────────────────────────
+
+
+def get_current_tenant(db: Session, user_sub: str) -> UUID:
+    """Look up the tenant for ``user_sub`` via ``user_tenants``.
+
+    Raises 403 if the user has no tenant membership.  Does not hardcode
+    the tenant id — the lookup is real even though today it resolves to
+    one row.
+    """
+    from app.models.tenant import UserTenant
+
+    tenant_id = db.execute(
+        select(UserTenant.tenant_id).where(UserTenant.user_id == user_sub)
+    ).scalar_one_or_none()
+
+    if tenant_id is None:
+        raise ForbiddenError("No tenant membership — contact an administrator")
+
+    return tenant_id
+
+
+def maybe_bootstrap_admin(
+    db: Session,
+    user_sub: str,
+    user_email: str | None,
+    email_verified: bool,
+) -> UUID | None:
+    """One-time-by-outcome per tenant: if ``user_roles`` has zero rows for the
+    default tenant, ``email_verified`` is true, and ``user_email`` matches that
+    tenant's ``superuser_email`` (case-insensitive), assign the ``iam_admin``
+    role scoped to that tenant.
+
+    Returns the tenant_id on bootstrap, ``None`` otherwise.  Idempotent —
+    must never fire again once any role row exists for the tenant.
+    """
+    from app.models.authorization import Role, UserRole
+    from app.models.tenant import Tenant, UserTenant
+
+    tenant = db.execute(
+        select(Tenant).where(Tenant.name == "default")
+    ).scalar_one_or_none()
+    if tenant is None:
+        return None
+
+    # Check if bootstrap already fired: any role row for this tenant?
+    has_any_roles = db.execute(
+        select(UserRole.user_id).where(UserRole.tenant_id == tenant.id).limit(1)
+    ).scalar_one_or_none()
+    if has_any_roles is not None:
+        return None  # Bootstrap already fired — this user wasn't included.
+
+    # Check email match.
+    if not email_verified or not user_email:
+        return None
+    if user_email.lower() != (tenant.superuser_email or "").lower():
+        return None
+
+    # Find the iam_admin role.
+    iam_admin_role = db.execute(
+        select(Role).where(Role.slug == "iam_admin")
+    ).scalar_one_or_none()
+    if iam_admin_role is None:
+        return None
+
+    # Bootstrap: create tenant membership + iam_admin role assignment.
+    db.add(UserTenant(user_id=user_sub, tenant_id=tenant.id))
+    db.add(UserRole(user_id=user_sub, role_id=iam_admin_role.id, tenant_id=tenant.id))
+    db.flush()
+
+    logger.info(
+        "bootstrap: assigned iam_admin to %s for tenant %s",
+        user_sub,
+        tenant.id,
+    )
+    return tenant.id
+
+
+def resolve_tenant_id(
+    db: Session,
+    user_sub: str,
+    user_email: str | None = None,
+    email_verified: bool = False,
+) -> UUID:
+    """Get the tenant_id for this user, bootstrapping if this is the first user
+    in the default tenant.  Raises 403 if no membership can be established."""
+    # Try existing membership first.
+    try:
+        return get_current_tenant(db, user_sub)
+    except ForbiddenError:
+        pass
+
+    # No membership — try bootstrap.
+    tenant_id = maybe_bootstrap_admin(db, user_sub, user_email, email_verified)
+    if tenant_id is not None:
+        return tenant_id
+
+    raise ForbiddenError("No tenant membership — contact an administrator")
+
+
+# ── User upsert ────────────────────────────────────────────────────────
+
+
+def upsert_user(
+    db: Session,
+    sub: str,
+    email: str | None,
+    username: str | None,
+) -> None:
+    """Insert or update the ``users`` row for this Keycloak sub.
+
+    Only writes if the user is new or if email/username changed — avoids
+    a write on every request.
+    """
+    from app.models.tenant import User
+
+    existing = db.get(User, sub)
+    if existing is not None:
+        needs_update = (
+            (email is not None and existing.email != email)
+            or (username is not None and existing.username != username)
+        )
+        if needs_update:
+            if email is not None:
+                existing.email = email
+            if username is not None:
+                existing.username = username
+            db.flush()
+        return
+
+    db.add(User(
+        id=sub,
+        email=email or "",
+        username=username,
+    ))
+    db.flush()
+
+
+# ── Soft delete ────────────────────────────────────────────────────────
+
+
+def soft_delete_user(db: Session, user_sub: str) -> None:
+    """Soft-delete a user: set ``deleted_at``, remove tenant memberships and
+    role assignments.  Does NOT touch Keycloak — caller is responsible for
+    disabling the Keycloak account via the Admin API.
+
+    Wrapped in a savepoint so the caller can manage the outer transaction.
+    """
+    from app.models.authorization import UserRole
+    from app.models.tenant import User, UserTenant
+
+    user = db.get(User, user_sub)
+    if user is None:
+        raise NotFoundError(f"user {user_sub} not found")
+
+    user.deleted_at = datetime.now(timezone.utc)
+
+    # Remove role assignments.
+    db.execute(
+        UserRole.__table__.delete().where(UserRole.user_id == user_sub)
+    )
+
+    # Remove tenant memberships.
+    db.execute(
+        UserTenant.__table__.delete().where(UserTenant.user_id == user_sub)
+    )
+
+    db.flush()
+
+
+# ── Identity resolution ────────────────────────────────────────────────
+
+
 async def get_current_user(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
     x_debug_user: str | None = Header(default=None, include_in_schema=False),
+    db: Session = Depends(get_db),
 ) -> CurrentUser:
     """FastAPI dependency that resolves the caller's identity.
 
     Resolution order:
-      1. ``X-Debug-User`` header — tests and local dev.
+      1. ``X-Debug-User`` header — tests and local development.
       2. ``Authorization: Bearer`` header — Swagger UI / BFF proxy.
       3. No credentials → 401.
     """
     # 1. Debug header — tests and local development ONLY.
-    #    Gated behind environment check so a misconfigured production deployment
-    #    cannot silently enable full auth bypass via this header.
     settings = get_settings()
     if x_debug_user and settings.environment != "production":
         sub, username, _perms = x_debug_user.split(":", 2)
-        return CurrentUser(sub=sub, username=username)
+
+        # Upsert user and resolve tenant (same path as real JWT).
+        upsert_user(db, sub, email=None, username=username)
+        tenant_id = resolve_tenant_id(db, sub)
+
+        return CurrentUser(sub=sub, username=username, tenant_id=tenant_id)
 
     # 2. Bearer header — Swagger / BFF proxy.
     if credentials:
@@ -168,11 +353,21 @@ async def get_current_user(
             else:
                 raise HTTPException(status_code=401, detail="Invalid token")
 
+        sub = payload["sub"]
+        username = payload.get("preferred_username", "")
+        email = payload.get("email")
+        email_verified = payload.get("email_verified", False)
+
+        # Upsert user and resolve tenant.
+        upsert_user(db, sub, email=email, username=username)
+        tenant_id = resolve_tenant_id(db, sub, email, email_verified)
+
         # JWT is identity-only — roles are intentionally ignored here.
         # Permissions are resolved from the database by require_permission().
         return CurrentUser(
-            sub=payload["sub"],
-            username=payload.get("preferred_username", ""),
+            sub=sub,
+            username=username,
+            tenant_id=tenant_id,
         )
 
     # 3. No auth — 401.
@@ -196,7 +391,7 @@ def require_permission(permission: str):
     ) -> CurrentUser:
         from app.services.permission_service import resolve_permissions
 
-        user.permissions = resolve_permissions(db, user.sub)
+        user.permissions = resolve_permissions(db, user.sub, user.tenant_id)
         granted = permission in user.permissions
 
         logger.info(
@@ -204,6 +399,7 @@ def require_permission(permission: str):
             extra={
                 "request_id": get_request_id(),
                 "user_id": user.sub,
+                "tenant_id": str(user.tenant_id),
                 "permission": permission,
                 "decision": "allow" if granted else "deny",
                 "status": 200 if granted else 403,
@@ -220,12 +416,32 @@ def require_permission(permission: str):
     return checker
 
 
+# ── Tenant scope ───────────────────────────────────────────────────────
+
+
+def enforce_tenant_scope(
+    resource_tenant_id: UUID,
+    current_tenant_id: UUID,
+) -> None:
+    """Hard boundary: raise 403 if the resource belongs to a different tenant.
+
+    No permission can bypass this — not even ``warehouse.global``, which means
+    "all warehouses within my tenant," never across tenants.
+    """
+    if resource_tenant_id != current_tenant_id:
+        raise ForbiddenError("cross-tenant access denied")
+
+
 # ── Warehouse scope ────────────────────────────────────────────────────
 
 def assigned_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
+    """Return warehouse IDs assigned to this user within their current tenant."""
     rows = db.execute(
-        select(UserWarehouseAssignment.warehouse_id).where(
-            UserWarehouseAssignment.user_id == user.sub
+        select(UserWarehouseAssignment.warehouse_id)
+        .join(Warehouse, Warehouse.id == UserWarehouseAssignment.warehouse_id)
+        .where(
+            UserWarehouseAssignment.user_id == user.sub,
+            Warehouse.tenant_id == user.tenant_id,
         )
     ).scalars()
     return set(rows)
@@ -235,13 +451,14 @@ def _ensure_permissions(db: Session, user: CurrentUser) -> None:
     """Lazily resolve permissions from the DB if not already populated."""
     if not user.permissions:
         from app.services.permission_service import resolve_permissions
-        user.permissions = resolve_permissions(db, user.sub)
+        user.permissions = resolve_permissions(db, user.sub, user.tenant_id)
 
 
 def enforce_warehouse_scope(db: Session, user: CurrentUser, warehouse_id: UUID | None) -> None:
     """The warehouse-scope check (Sections 9, 13.3). Called by every service entry
     point and agent tool that touches a specific warehouse — built in from Phase 1,
-    not bolted on. Users with ``warehouse.global`` permission bypass scoping."""
+    not bolted on. Users with ``warehouse.global`` permission bypass scoping
+    (within their tenant only)."""
     _ensure_permissions(db, user)
     if _GLOBAL_PERMISSIONS & user.permissions:
         return

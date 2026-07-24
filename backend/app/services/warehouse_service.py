@@ -8,8 +8,12 @@ from app.models import UserWarehouseAssignment, Warehouse
 from app.schemas.warehouse import WarehouseCreate
 
 
-def list_warehouses(db: Session) -> list[Warehouse]:
-    return list(db.execute(select(Warehouse).order_by(Warehouse.name)).scalars())
+def list_warehouses(db: Session, tenant_id: UUID) -> list[Warehouse]:
+    return list(db.execute(
+        select(Warehouse)
+        .where(Warehouse.tenant_id == tenant_id)
+        .order_by(Warehouse.name)
+    ).scalars())
 
 
 def get_warehouse(db: Session, warehouse_id: UUID) -> Warehouse:
@@ -19,8 +23,8 @@ def get_warehouse(db: Session, warehouse_id: UUID) -> Warehouse:
     return wh
 
 
-def create_warehouse(db: Session, data: WarehouseCreate) -> Warehouse:
-    wh = Warehouse(name=data.name, address=data.address)
+def create_warehouse(db: Session, data: WarehouseCreate, tenant_id: UUID) -> Warehouse:
+    wh = Warehouse(name=data.name, address=data.address, tenant_id=tenant_id)
     db.add(wh)
     db.commit()
     return wh

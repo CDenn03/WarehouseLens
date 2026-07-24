@@ -12,6 +12,7 @@ class Warehouse(Base, UuidPkMixin, CreatedAtMixin):
     name: Mapped[str] = mapped_column(String(120))
     address: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(default=True)
+    tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"))
 
 
 class UserWarehouseAssignment(Base):

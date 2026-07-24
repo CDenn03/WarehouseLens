@@ -31,3 +31,6 @@ class InventoryTransaction(Base, UuidPkMixin):
     type: Mapped[str] = mapped_column(String(30))
     reference_id: Mapped[uuid.UUID | None]  # optional FK to a PO, shipment, etc.
     occurred_at: Mapped[datetime] = mapped_column(default=utcnow)
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )

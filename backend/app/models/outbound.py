@@ -39,6 +39,9 @@ class SalesOrder(Base, UuidPkMixin, CreatedAtMixin):
 
     source_warehouse_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("warehouses.id"))
     customer_name: Mapped[str | None] = mapped_column(String(200))
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )
 
     items: Mapped[list["SalesOrderItem"]] = relationship(
         cascade="all, delete-orphan", lazy="selectin"
@@ -66,6 +69,9 @@ class OutboundRequest(Base, UuidPkMixin, CreatedAtMixin):
         ForeignKey("warehouses.id")
     )
     status: Mapped[str] = mapped_column(String(30), default=OutboundStatus.REQUESTED)
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )
 
     items: Mapped[list["OutboundRequestItem"]] = relationship(
         cascade="all, delete-orphan", lazy="selectin"
@@ -97,6 +103,9 @@ class PickList(Base, UuidPkMixin, CreatedAtMixin):
     status: Mapped[str] = mapped_column(String(30), default=PickListStatus.OPEN)
     assigned_to: Mapped[str | None] = mapped_column(String(120))
     completed_at: Mapped[datetime | None]
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )
 
     outbound_request: Mapped[OutboundRequest] = relationship(back_populates="pick_lists")
     items: Mapped[list["PickListItem"]] = relationship(
@@ -125,3 +134,6 @@ class Shipment(Base, UuidPkMixin):
     packed_at: Mapped[datetime | None]
     shipped_at: Mapped[datetime | None]
     delivered_at: Mapped[datetime | None]
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )

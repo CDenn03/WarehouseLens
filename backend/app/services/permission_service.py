@@ -1,7 +1,7 @@
 """Permission resolution — reads roles and permissions from PostgreSQL.
 
 Resolution algorithm (deny-by-default):
-  1. Look up user_roles for the given user_id.
+  1. Look up user_roles for the given user_id AND tenant_id.
   2. Look up role_permissions for each assigned role.
   3. Return a deduplicated set of permission IDs.
 
@@ -17,15 +17,19 @@ from sqlalchemy.orm import Session
 from app.models.authorization import RolePermission, UserRole
 
 
-def resolve_permissions(db: Session, user_id: str) -> set[str]:
-    """Return the set of permission IDs granted to ``user_id`` via their roles.
+def resolve_permissions(db: Session, user_id: str, tenant_id: UUID) -> set[str]:
+    """Return the set of permission IDs granted to ``user_id`` within
+    ``tenant_id`` via their roles.
 
-    >>> resolve_permissions(db, "some-keycloak-sub")
+    >>> resolve_permissions(db, "some-keycloak-sub", tenant_uuid)
     {'inventory.read', 'dashboard.read', ...}
     """
-    # 1. Find role IDs assigned to this user.
+    # 1. Find role IDs assigned to this user within this tenant.
     role_ids = db.execute(
-        select(UserRole.role_id).where(UserRole.user_id == user_id)
+        select(UserRole.role_id).where(
+            UserRole.user_id == user_id,
+            UserRole.tenant_id == tenant_id,
+        )
     ).scalars().all()
 
     if not role_ids:

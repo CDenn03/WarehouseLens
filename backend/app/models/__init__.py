@@ -6,6 +6,7 @@ from app.models.authorization import (
     RolePermission,
     UserRole,
 )
+from app.models.tenant import Tenant, User, UserTenant
 from app.models.warehouse import UserWarehouseAssignment, Warehouse
 from app.models.product import Product, WarehouseStock
 from app.models.supplier import Supplier
@@ -29,6 +30,9 @@ __all__ = [
     "Role",
     "RolePermission",
     "UserRole",
+    "Tenant",
+    "User",
+    "UserTenant",
     "Warehouse",
     "UserWarehouseAssignment",
     "Product",

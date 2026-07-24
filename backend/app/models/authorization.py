@@ -41,6 +41,9 @@ class UserRole(Base):
     role_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("roles.id"), primary_key=True
     )
+    tenant_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("tenants.id"), primary_key=True
+    )
     assigned_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
     assigned_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
 
@@ -56,3 +59,6 @@ class AccessDecision(Base, UuidPkMixin):
     source: Mapped[str | None] = mapped_column(String(200), nullable=True)
     action_context: Mapped[str | None] = mapped_column(Text, nullable=True)
     decided_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+    created_by: Mapped[str | None] = mapped_column(
+        String(120), ForeignKey("users.id"), nullable=True
+    )

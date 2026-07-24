@@ -37,7 +37,11 @@ export async function apiFetch<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const url = new URL(`/api/v1${path}`, window.location.origin);
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const url = new URL(`/api/v1${path}`, baseUrl);
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
       if (value !== undefined && value !== null && value !== "") {
