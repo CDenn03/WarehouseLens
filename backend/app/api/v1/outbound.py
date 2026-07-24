@@ -4,8 +4,15 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions.outbound import (
+    OUTBOUND_PICK_LIST_MANAGE,
+    OUTBOUND_SALES_ORDER_CREATE,
+    OUTBOUND_SHIP_MANAGE,
+    OUTBOUND_TRANSFER_CREATE,
+)
 from app.core.security import (
     CurrentUser,
+    enforce_tenant_scope,
     enforce_warehouse_scope,
     get_current_user,
     require_permission,
@@ -25,6 +32,7 @@ from app.schemas.outbound import (
     ShipRequest,
 )
 from app.services import outbound_service
+from app.services.warehouse_service import get_warehouse
 
 router = APIRouter(tags=["outbound"])
 
@@ -33,8 +41,10 @@ router = APIRouter(tags=["outbound"])
 def create_sales_order(
     data: SalesOrderCreate,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.sales_order.create")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_SALES_ORDER_CREATE)),
 ):
+    wh = get_warehouse(db, data.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, data.source_warehouse_id)
     order, request = outbound_service.create_sales_order(db, data)
     response = SalesOrderRead.model_validate(order)
@@ -62,6 +72,8 @@ def get_outbound_request(
     user: CurrentUser = Depends(get_current_user),
 ):
     request = outbound_service.get_outbound_request(db, request_id)
+    wh = get_warehouse(db, request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, request.source_warehouse_id)
     return request
 
@@ -70,8 +82,10 @@ def get_outbound_request(
 def create_internal_transfer(
     data: OutboundRequestCreate,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.transfer.create")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_TRANSFER_CREATE)),
 ):
+    wh = get_warehouse(db, data.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, data.source_warehouse_id)
     return outbound_service.create_internal_transfer(db, data)
 
@@ -81,9 +95,11 @@ def generate_pick_list(
     request_id: UUID,
     data: PickListCreate | None = None,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.pick_list.manage")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_PICK_LIST_MANAGE)),
 ):
     request = outbound_service.get_outbound_request(db, request_id)
+    wh = get_warehouse(db, request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, request.source_warehouse_id)
     return outbound_service.generate_pick_list(db, request_id, data or PickListCreate())
 
@@ -94,9 +110,11 @@ def record_pick(
     product_id: UUID,
     data: PickItemUpdate,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.pick_list.manage")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_PICK_LIST_MANAGE)),
 ):
     pick_list = outbound_service.get_pick_list(db, pick_list_id)
+    wh = get_warehouse(db, pick_list.outbound_request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, pick_list.outbound_request.source_warehouse_id)
     return outbound_service.record_pick(db, pick_list_id, product_id, data)
 
@@ -105,9 +123,11 @@ def record_pick(
 def complete_pick_list(
     pick_list_id: UUID,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.pick_list.manage")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_PICK_LIST_MANAGE)),
 ):
     pick_list = outbound_service.get_pick_list(db, pick_list_id)
+    wh = get_warehouse(db, pick_list.outbound_request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, pick_list.outbound_request.source_warehouse_id)
     return outbound_service.complete_pick_list(db, pick_list_id)
 
@@ -117,9 +137,11 @@ def ship(
     request_id: UUID,
     data: ShipRequest | None = None,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.ship.manage")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_SHIP_MANAGE)),
 ):
     request = outbound_service.get_outbound_request(db, request_id)
+    wh = get_warehouse(db, request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, request.source_warehouse_id)
     return outbound_service.ship(db, request_id, data or ShipRequest())
 
@@ -128,9 +150,11 @@ def ship(
 def deliver(
     shipment_id: UUID,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("outbound.ship.manage")),
+    user: CurrentUser = Depends(require_permission(OUTBOUND_SHIP_MANAGE)),
 ):
     shipment = outbound_service.get_shipment(db, shipment_id)
     request = outbound_service.get_outbound_request(db, shipment.outbound_request_id)
+    wh = get_warehouse(db, request.source_warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, request.source_warehouse_id)
     return outbound_service.deliver(db, shipment_id)

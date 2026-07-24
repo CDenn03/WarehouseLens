@@ -1,12 +1,13 @@
 from datetime import date
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions.inventory import INVENTORY_PRODUCT_CREATE, INVENTORY_WRITE
 from app.core.security import (
     CurrentUser,
+    enforce_tenant_scope,
     enforce_warehouse_scope,
     get_current_user,
     require_permission,
@@ -15,6 +16,8 @@ from app.core.security import (
 from app.schemas.inventory import TransactionCreate, TransactionRead
 from app.schemas.product import ProductCreate, ProductRead, ProductStockBreakdown
 from app.services import inventory_service
+from app.services.warehouse_service import get_warehouse
+from uuid import UUID
 
 router = APIRouter(tags=["inventory"])
 
@@ -32,7 +35,7 @@ def list_products(
 def create_product(
     data: ProductCreate,
     db: Session = Depends(get_db),
-    _user: CurrentUser = Depends(require_permission("inventory.product.create")),
+    _user: CurrentUser = Depends(require_permission(INVENTORY_PRODUCT_CREATE)),
 ):
     return inventory_service.create_product(db, data)
 
@@ -68,7 +71,9 @@ def list_transactions(
 def create_transaction(
     data: TransactionCreate,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("inventory.write")),
+    user: CurrentUser = Depends(require_permission(INVENTORY_WRITE)),
 ):
+    wh = get_warehouse(db, data.warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, data.warehouse_id)
     return inventory_service.create_manual_transaction(db, data)

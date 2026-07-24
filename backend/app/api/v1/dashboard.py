@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions.dashboard import DASHBOARD_READ
 from app.core.security import (
     CurrentUser,
     enforce_warehouse_scope,
@@ -20,7 +21,7 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 def kpis(
     warehouse_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("dashboard.read")),
+    user: CurrentUser = Depends(require_permission(DASHBOARD_READ)),
 ):
     if warehouse_id is not None:
         enforce_warehouse_scope(db, user, warehouse_id)
@@ -33,7 +34,7 @@ def stock_trend(
     warehouse_id: UUID | None = Query(default=None),
     days: int = Query(default=30, ge=2, le=365),
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("dashboard.read")),
+    user: CurrentUser = Depends(require_permission(DASHBOARD_READ)),
 ):
     if warehouse_id is not None:
         enforce_warehouse_scope(db, user, warehouse_id)
@@ -45,7 +46,7 @@ def stock_trend(
 def abc_ranking(
     warehouse_id: UUID | None = Query(default=None),
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("dashboard.read")),
+    user: CurrentUser = Depends(require_permission(DASHBOARD_READ)),
 ):
     if warehouse_id is not None:
         enforce_warehouse_scope(db, user, warehouse_id)

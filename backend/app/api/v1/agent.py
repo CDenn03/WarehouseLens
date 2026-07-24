@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.agent.planner import run_agent
 from app.core.database import get_db
+from app.core.permissions.agent import AGENT_INVOKE
 from app.core.security import CurrentUser, enforce_warehouse_scope, require_permission
 from app.schemas.agent import AgentAnswer, AgentQuery
 
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/agent", tags=["agent"])
 def query(
     body: AgentQuery,
     db: Session = Depends(get_db),
-    user: CurrentUser = Depends(require_permission("agent.invoke")),
+    user: CurrentUser = Depends(require_permission(AGENT_INVOKE)),
 ):
     """The copilot endpoint.
 
