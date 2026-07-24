@@ -22,7 +22,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
-    command: start-dev
+    command: start-dev --hostname=http://localhost:8080 --hostname-strict=false
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -58,6 +58,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     depends_on: [backend]
+    extra_hosts:
+      - "localhost:host-gateway"
     ports: ["3000:3000"]
 
 volumes:

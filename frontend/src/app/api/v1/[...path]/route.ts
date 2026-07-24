@@ -9,6 +9,8 @@ const UPSTREAM_ERROR = {
   message: "API service is unreachable",
 } as const;
 
+const UPSTREAM_TIMEOUT_MS = 30_000;
+
 function generateRequestId(): string {
   return `req-${crypto.randomUUID()}`;
 }
@@ -18,6 +20,8 @@ async function proxy(
   path: string,
   request: NextRequest,
 ): Promise<NextResponse> {
+  const startTime = Date.now();
+
   // ── 1. Resolve session ──────────────────────────────────────────────
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -70,6 +74,7 @@ async function proxy(
     method,
     headers,
     redirect: "manual",
+    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
   };
 
   // Forward body for non-GET/HEAD methods.
@@ -91,21 +96,47 @@ async function proxy(
 
   // ── 4. Proxy to FastAPI ─────────────────────────────────────────────
   let upstream: Response;
+  let durationMs: number;
   try {
     upstream = await fetch(upstreamUrl.toString(), init);
+    durationMs = Date.now() - startTime;
   } catch (err) {
+    durationMs = Date.now() - startTime;
+    const isTimeout = err instanceof DOMException && err.name === "TimeoutError";
     console.error(
       JSON.stringify({
         request_id: requestId,
         layer: "bff",
-        error: "upstream_connect_failed",
+        error: isTimeout ? "upstream_timeout" : "upstream_connect_failed",
         detail: String(err),
+        duration_ms: durationMs,
       }),
     );
-    return NextResponse.json(UPSTREAM_ERROR, { status: 502 });
+    const status = isTimeout ? 504 : 502;
+    return NextResponse.json(
+      isTimeout
+        ? { error: "gateway_timeout", message: "Upstream did not respond in time" }
+        : UPSTREAM_ERROR,
+      { status },
+    );
   }
 
-  // ── 5. Return transparently ─────────────────────────────────────────
+  // ── 5. Observability — log request with timing ──────────────────────
+  const upstreamStatus = upstream.status;
+  console.log(
+    JSON.stringify({
+      request_id: requestId,
+      layer: "bff",
+      method,
+      path: `/api/v1${path}`,
+      user_sub: session.user?.sub ?? "unknown",
+      status: upstreamStatus,
+      upstream_status: upstreamStatus,
+      duration_ms: durationMs,
+    }),
+  );
+
+  // ── 6. Return transparently ─────────────────────────────────────────
   const responseHeaders = new Headers();
   const copyHeaders = ["content-type", "x-request-id", "etag"];
   for (const h of copyHeaders) {
@@ -113,6 +144,7 @@ async function proxy(
     if (v) responseHeaders.set(h, v);
   }
   responseHeaders.set("x-request-id", requestId);
+  responseHeaders.set("x-upstream-status", String(upstreamStatus));
 
   return new NextResponse(upstream.body, {
     status: upstream.status,

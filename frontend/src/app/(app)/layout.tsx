@@ -26,7 +26,7 @@ function initialsOf(name: string): string {
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
-  if (!session) redirect("/api/auth/signin");
+  if (!session) redirect("/signin");
 
   return (
     <div className="flex min-h-screen">

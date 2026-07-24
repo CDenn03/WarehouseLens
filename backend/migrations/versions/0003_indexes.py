@@ -6,6 +6,7 @@ Create Date: 2026-07-23
 
 """
 from alembic import op
+import sqlalchemy as sa
 
 revision = "0003"
 down_revision = "0002"
@@ -27,7 +28,7 @@ def upgrade() -> None:
     op.create_index(
         "idx_access_decisions_user_time",
         "access_decisions",
-        ["user_id", op.text("decided_at DESC")],
+        ["user_id", sa.text("decided_at DESC")],
     )
 
 

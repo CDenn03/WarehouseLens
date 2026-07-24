@@ -23,6 +23,7 @@ node_modules/
 .next/
 out/
 npm-debug.log*
+frontend/.pnpm-store/
 
 # Eval output
 eval/results.json

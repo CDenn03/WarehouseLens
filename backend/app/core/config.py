@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    environment: str = "development"
+
     database_url: str = "postgresql+psycopg://wms:wms_dev_password@localhost:5432/wms"
 
     redis_url: str = "redis://localhost:6379/0"
