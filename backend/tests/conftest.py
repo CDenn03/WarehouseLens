@@ -99,9 +99,6 @@ def _seed_permissions_and_roles(db_session, tenant_id) -> dict[str, Role]:
         UserRole(user_id=NAIROBI_MANAGER_USER, role_id=roles["warehouse_manager"].id, tenant_id=tenant_id),
         UserRole(user_id=AUDITOR_USER, role_id=roles["auditor"].id, tenant_id=tenant_id),
     ])
-    db_session.flush()
-
-    return roles
 
 
 @pytest.fixture()

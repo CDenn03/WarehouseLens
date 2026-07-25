@@ -336,7 +336,7 @@ class TestPermissionResolutionEdgeCases:
 
     def test_admin_has_all_permissions(self, db_session, seed_harden):
         perms = resolve_permissions(db_session, ADMIN_USER, seed_harden["tenant"].id)
-        assert len(perms) >= len(ALL_PERMISSIONS) - 2  # admin excludes IAM perms
+        assert len(perms) >= len(ALL_PERMISSIONS) - 5  # admin excludes IAM + platform perms
 
     def test_unknown_user_has_no_permissions(self, db_session, seed_harden):
         assert resolve_permissions(db_session, "nonexistent-sub", seed_harden["tenant"].id) == set()

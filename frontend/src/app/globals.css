@@ -68,6 +68,16 @@
     --radius: 20px;
     --radius-sm: 12px;
     --maxw: 1160px;
+
+    /* Landing palette */
+    --line: #DAD5C6;
+    --forest: #1D2E20;
+    --forest-soft: #2A3E2D;
+    --sage: #93A889;
+    --sage-deep: #5E7358;
+    --rust: #C1673A;
+    --rust-deep: #8A431F;
+    --card-line: rgba(255, 255, 255, 0.12);
   }
 
   html {
@@ -82,6 +92,11 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+  }
+
+  /* Authenticated shell: +2px base font size (18px vs 16px default) */
+  .app-shell {
+    font-size: 18px;
   }
 
   h1,

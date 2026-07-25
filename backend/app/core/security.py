@@ -189,24 +189,115 @@ def maybe_bootstrap_admin(
     if user_email.lower() != (tenant.superuser_email or "").lower():
         return None
 
-    # Find the iam_admin role.
-    iam_admin_role = db.execute(
-        select(Role).where(Role.slug == "iam_admin")
+    # Find the tenant_admin role.
+    tenant_admin_role = db.execute(
+        select(Role).where(Role.slug == "tenant_admin")
     ).scalar_one_or_none()
-    if iam_admin_role is None:
+    if tenant_admin_role is None:
         return None
 
-    # Bootstrap: create tenant membership + iam_admin role assignment.
+    # Bootstrap: create tenant membership + tenant_admin role assignment.
     db.add(UserTenant(user_id=user_sub, tenant_id=tenant.id))
-    db.add(UserRole(user_id=user_sub, role_id=iam_admin_role.id, tenant_id=tenant.id))
+    db.add(UserRole(user_id=user_sub, role_id=tenant_admin_role.id, tenant_id=tenant.id))
     db.flush()
 
     logger.info(
-        "bootstrap: assigned iam_admin to %s for tenant %s",
+        "bootstrap: assigned tenant_admin to %s for tenant %s",
         user_sub,
         tenant.id,
     )
     return tenant.id
+
+
+def bootstrap_platform_admin(
+    db: Session,
+    user_sub: str,
+    user_email: str | None,
+    email_verified: bool,
+) -> UUID | None:
+    """One-time-by-outcome: if the platform pseudo-tenant has zero role rows
+    and the logging-in user's verified email matches ``Settings.platform_admin_email``,
+    replace the placeholder bootstrap user with this real Keycloak sub and
+    assign the ``platform_admin`` role.
+
+    Unlike ``maybe_bootstrap_admin``, this does NOT block re-entry after the
+    first user: additional platform admins are assigned via the platform
+    dashboard.  The one-time guard only prevents re-bootstrapping when the
+    placeholder row is still the only row.
+
+    Returns the platform tenant_id on success, ``None`` otherwise.
+    """
+    from app.core.config import get_settings
+    from app.models.authorization import Role, UserRole
+    from app.models.tenant import Tenant, UserTenant
+
+    settings = get_settings()
+
+    # Email match gate.
+    if not email_verified or not user_email:
+        return None
+    if user_email.lower() != settings.platform_admin_email.lower():
+        return None
+
+    platform_tenant = db.execute(
+        select(Tenant).where(Tenant.is_platform.is_(True))
+    ).scalar_one_or_none()
+    if platform_tenant is None:
+        return None
+
+    # Already has a real (non-placeholder) membership?  Return it directly.
+    real_membership = db.execute(
+        select(UserTenant).where(
+            UserTenant.tenant_id == platform_tenant.id,
+            UserTenant.user_id == user_sub,
+        )
+    ).scalar_one_or_none()
+    if real_membership is not None:
+        return platform_tenant.id
+
+    # Replace the placeholder bootstrap user with this real sub.
+    BOOTSTRAP_PLACEHOLDER = "platform-admin-bootstrap"
+    placeholder_role = db.execute(
+        select(UserRole).where(
+            UserRole.user_id == BOOTSTRAP_PLACEHOLDER,
+            UserRole.tenant_id == platform_tenant.id,
+        )
+    ).scalar_one_or_none()
+
+    platform_admin_role = db.execute(
+        select(Role).where(Role.slug == "platform_admin")
+    ).scalar_one_or_none()
+    if platform_admin_role is None:
+        return None
+
+    if placeholder_role is not None:
+        # Migrate placeholder → real sub.
+        db.delete(placeholder_role)
+        db.execute(
+            UserTenant.__table__.delete().where(
+                UserTenant.user_id == BOOTSTRAP_PLACEHOLDER,
+                UserTenant.tenant_id == platform_tenant.id,
+            )
+        )
+        db.flush()
+
+    db.add(UserTenant(user_id=user_sub, tenant_id=platform_tenant.id))
+    db.add(
+        UserRole(
+            user_id=user_sub,
+            role_id=platform_admin_role.id,
+            tenant_id=platform_tenant.id,
+        )
+    )
+    db.flush()
+
+    logger.info(
+        "bootstrap: assigned platform_admin to %s for platform tenant %s",
+        user_sub,
+        platform_tenant.id,
+    )
+    return platform_tenant.id
+
 
 
 def resolve_tenant_id(
@@ -216,14 +307,20 @@ def resolve_tenant_id(
     email_verified: bool = False,
 ) -> UUID:
     """Get the tenant_id for this user, bootstrapping if this is the first user
-    in the default tenant.  Raises 403 if no membership can be established."""
+    in the default tenant or the platform admin is logging in for the first time.
+    Raises 403 if no membership can be established."""
     # Try existing membership first.
     try:
         return get_current_tenant(db, user_sub)
     except ForbiddenError:
         pass
 
-    # No membership — try bootstrap.
+    # Try platform admin bootstrap first (email-matched).
+    tenant_id = bootstrap_platform_admin(db, user_sub, user_email, email_verified)
+    if tenant_id is not None:
+        return tenant_id
+
+    # Try default tenant bootstrap.
     tenant_id = maybe_bootstrap_admin(db, user_sub, user_email, email_verified)
     if tenant_id is not None:
         return tenant_id

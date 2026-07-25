@@ -101,8 +101,8 @@ class TestPermissionCatalogForm:
             )
 
     def test_all_permissions_has_no_duplicates(self):
-        """ALL_PERMISSIONS should contain exactly 18 permissions."""
-        assert len(ALL_PERMISSIONS) == 18, f"Expected 18 permissions, got {len(ALL_PERMISSIONS)}"
+        """ALL_PERMISSIONS should contain exactly 21 permissions (19 + dashboard.platform + platform.tenant.manage)."""
+        assert len(ALL_PERMISSIONS) == 21, f"Expected 21 permissions, got {len(ALL_PERMISSIONS)}"
 
     def test_role_definitions_has_5_roles(self):
-        assert len(ROLE_DEFINITIONS) == 5, f"Expected 5 roles, got {len(ROLE_DEFINITIONS)}"
+        assert len(ROLE_DEFINITIONS) == 6, f"Expected 6 roles, got {len(ROLE_DEFINITIONS)}"

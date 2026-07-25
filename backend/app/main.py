@@ -43,6 +43,16 @@ app.add_middleware(
 
 app.include_router(v1_router)
 
+# Registered routers (update when adding new domains):
+# - /api/v1/warehouses   — warehouse CRUD + user assignments
+# - /api/v1/inventory    — products, stock, transactions
+# - /api/v1/procurement  — suppliers, purchase orders
+# - /api/v1/outbound     — sales orders, pick/pack/ship
+# - /api/v1/dashboard    — KPIs and charts
+# - /api/v1/agent        — AI copilot query
+# - /api/v1/forecast     — demand forecasting
+# - /api/v1/iam          — user/role/warehouse-assignment admin
+
 
 @app.exception_handler(WarehouseLensError)
 async def domain_error_handler(request: Request, exc: WarehouseLensError) -> JSONResponse:

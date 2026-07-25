@@ -18,12 +18,17 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = "claude-sonnet-5"
 
-    # Worker cadences (seconds). Analytics every 5 min, forecasts hourly — the guide
-    # says 5-15 min is plenty for aggregation at this scale (Section 8).
+    # Worker cadences (seconds). Analytics every 5 min, forecasts hourly.
     worker_aggregation_interval: int = 300
     worker_forecast_interval: int = 3600
 
     forecast_default_horizon_days: int = 28
+
+    # Bootstrap emails — read at migration time to seed the default tenant's
+    # first admin and the platform pseudo-tenant's first platform admin.
+    # Both can be overridden at runtime via environment variable or .env file.
+    default_tenant_superuser_email: str = "admin@warehouselens.local"
+    platform_admin_email: str = "platform@warehouselens.local"
 
 
 @lru_cache

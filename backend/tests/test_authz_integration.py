@@ -405,7 +405,9 @@ class TestPermissionResolution:
 
     def test_admin_has_all_permissions(self, db_session, seed_auth):
         perms = resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)
-        assert len(perms) >= len(ALL_PERMISSIONS) - 2  # admin excludes IAM perms
+        # admin excludes: iam.role.manage, iam.user_role.assign, iam.user.read,
+        # dashboard.platform, platform.tenant.manage  (5 total)
+        assert len(perms) >= len(ALL_PERMISSIONS) - 5
 
     def test_warehouse_global_for_admin(self, db_session, seed_auth):
         assert WAREHOUSE_GLOBAL in resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)

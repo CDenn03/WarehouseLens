@@ -14,11 +14,12 @@ from . import (
     iam,
     inventory,
     outbound,
+    platform,
     procurement,
     warehouse,
 )
 
-_MODULES = [agent, dashboard, forecast, iam, inventory, outbound, procurement, warehouse]
+_MODULES = [agent, dashboard, forecast, iam, inventory, outbound, platform, procurement, warehouse]
 
 ALL_PERMISSIONS: dict[str, str] = {}
 PERMISSION_CATEGORY: dict[str, str] = {}

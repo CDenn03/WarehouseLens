@@ -20,7 +20,11 @@ export const authOptions: NextAuthOptions = {
           ...token,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
-          expiresAt: Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 300),
+          // id_token is required for Keycloak RP-initiated logout
+          // (end-session endpoint expects id_token_hint).
+          idToken: account.id_token,
+          expiresAt:
+            Math.floor(Date.now() / 1000) + Number(account.expires_in ?? 300),
         };
       }
 
@@ -47,18 +51,26 @@ export const authOptions: NextAuthOptions = {
           accessToken: refreshed.accessToken,
           refreshToken: refreshed.refreshToken,
           expiresAt: refreshed.expiresAt,
+          // id_token does not change on refresh — keep the original.
         };
       } catch {
         // Refresh failed — invalidate session, force re-login.
-        return { ...token, accessToken: undefined, refreshToken: undefined, expiresAt: 0 };
+        return {
+          ...token,
+          accessToken: undefined,
+          refreshToken: undefined,
+          expiresAt: 0,
+        };
       }
     },
 
     async session({ session, token }) {
-      // Expose access token for the BFF proxy route (server-side only — never
-      // reaches browser JS).
+      // Expose access token and id token for server-side use only
+      // (BFF proxy and logout endpoint). Neither reaches browser JS.
       (session as unknown as Record<string, unknown>).accessToken =
         token.accessToken as string;
+      (session as unknown as Record<string, unknown>).idToken =
+        token.idToken as string | undefined;
       return session;
     },
   },

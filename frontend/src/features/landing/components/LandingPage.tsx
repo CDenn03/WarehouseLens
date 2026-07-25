@@ -1,20 +1,22 @@
-import { LandingHeader } from "./LandingHeader";
-import { HeroSection } from "./HeroSection";
-import { ModulesSection } from "./ModulesSection";
-import { WhoSection } from "./WhoSection";
-import { StackSection } from "./StackSection";
-import { FaqSection } from "./FaqSection";
-import { LandingFooter } from "./LandingFooter";
+import { LandingHeader } from "@/features/landing/components/LandingHeader";
+import { HeroSection } from "@/features/landing/components/HeroSection";
+import { ModulesSection } from "@/features/landing/components/ModulesSection";
+import { StackSection } from "@/features/landing/components/StackSection";
+import { WhoSection } from "@/features/landing/components/WhoSection";
+import { FaqSection } from "@/features/landing/components/FaqSection";
+import { LandingFooter } from "@/features/landing/components/LandingFooter";
 
-export function LandingPage() {
+export const dynamic = "force-dynamic";
+
+export default function Page() {
   return (
     <>
       <LandingHeader />
-      <main id="top">
+      <main>
         <HeroSection />
         <ModulesSection />
-        <WhoSection />
         <StackSection />
+        <WhoSection />
         <FaqSection />
       </main>
       <LandingFooter />

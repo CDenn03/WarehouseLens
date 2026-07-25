@@ -10,12 +10,19 @@ from app.models.base import Base, CreatedAtMixin, UuidPkMixin, utcnow
 class Tenant(Base, UuidPkMixin, CreatedAtMixin):
     """Top-level organisational boundary.  A second tenant can be added by
     inserting a row — no retrofitting of queries required (single-tenant now,
-    multi-tenant ready)."""
+    multi-tenant ready).
+
+    ``is_platform=True`` marks the single platform pseudo-tenant.  It owns
+    the platform_admin role assignments and has no warehouses or operational
+    data.  Tenant-listing queries use ``WHERE is_platform = false`` to exclude
+    it from the real-tenant list.
+    """
 
     __tablename__ = "tenants"
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
     superuser_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_platform: Mapped[bool] = mapped_column(default=False)
 
 
 class User(Base):
