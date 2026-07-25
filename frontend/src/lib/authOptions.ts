@@ -71,6 +71,10 @@ export const authOptions: NextAuthOptions = {
         token.accessToken as string;
       (session as unknown as Record<string, unknown>).idToken =
         token.idToken as string | undefined;
+      // Populate sub so server components can identify the user.
+      if (session.user) {
+        session.user.sub = token.sub as string;
+      }
       return session;
     },
   },

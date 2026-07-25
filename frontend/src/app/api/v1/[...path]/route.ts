@@ -23,27 +23,34 @@ async function proxy(
   const startTime = Date.now();
 
   // ── 1. Resolve session ──────────────────────────────────────────────
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-  }
+  // Server-side callers (layout, pages) pass the token directly via
+  // Authorization header.  Browser callers rely on the session cookie.
+  let accessToken = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
+  let userSub = "unknown";
 
-  const accessToken = (session as unknown as Record<string, unknown>).accessToken as
-    | string
-    | undefined;
   if (!accessToken) {
-    console.error(
-      JSON.stringify({
-        request_id: request.headers.get("x-request-id") ?? "unknown",
-        layer: "bff",
-        error: "missing_access_token",
-        user_sub: session.user?.sub ?? "unknown",
-      }),
-    );
-    return NextResponse.json(
-      { error: "unauthorized", message: "No access token in session" },
-      { status: 401 },
-    );
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
+    accessToken = (session as unknown as Record<string, unknown>).accessToken as
+      | string
+      | undefined;
+    userSub = session.user?.sub ?? "unknown";
+    if (!accessToken) {
+      console.error(
+        JSON.stringify({
+          request_id: request.headers.get("x-request-id") ?? "unknown",
+          layer: "bff",
+          error: "missing_access_token",
+          user_sub: userSub,
+        }),
+      );
+      return NextResponse.json(
+        { error: "unauthorized", message: "No access token in session" },
+        { status: 401 },
+      );
+    }
   }
 
   // ── 2. Correlation ID ───────────────────────────────────────────────
@@ -51,7 +58,7 @@ async function proxy(
     request.headers.get("x-request-id") ?? generateRequestId();
 
   // ── 3. Build upstream request ───────────────────────────────────────
-  const upstreamUrl = new URL(`/api/v1${path}`, BACKEND_URL);
+  const upstreamUrl = new URL(`/api/v1/${path}`, BACKEND_URL);
   upstreamUrl.search = request.nextUrl.search;
 
   const headers = new Headers();
@@ -89,8 +96,8 @@ async function proxy(
       request_id: requestId,
       layer: "bff",
       method,
-      path: `/api/v1${path}`,
-      user_sub: session.user?.sub ?? "unknown",
+      path: `/api/v1/${path}`,
+      user_sub: userSub,
     }),
   );
 
@@ -128,8 +135,8 @@ async function proxy(
       request_id: requestId,
       layer: "bff",
       method,
-      path: `/api/v1${path}`,
-      user_sub: session.user?.sub ?? "unknown",
+      path: `/api/v1/${path}`,
+      user_sub: userSub,
       status: upstreamStatus,
       upstream_status: upstreamStatus,
       duration_ms: durationMs,

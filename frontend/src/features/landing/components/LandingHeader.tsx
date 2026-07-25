@@ -45,8 +45,9 @@ export function LandingHeader() {
         >
           {[
             { href: "#features", label: "Modules" },
+            { href: "#how", label: "How it works" },
             { href: "#who", label: "Who it's for" },
-            { href: "#stack", label: "Stack" },
+            { href: "#copilot", label: "Copilot" },
             { href: "#faq", label: "FAQ" },
           ].map(({ href, label }) => (
             <a

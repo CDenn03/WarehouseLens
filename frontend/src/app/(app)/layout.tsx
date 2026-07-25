@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { getSession } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import type { IamUserRead } from "@/features/admin/types";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "WarehouseLens";
 
@@ -16,12 +15,19 @@ export const metadata: Metadata = {
   description: "Warehouse operations with an AI copilot",
 };
 
-async function getIsPlatformAdmin(sub: string): Promise<boolean> {
+interface MeResponse {
+  sub: string;
+  username: string;
+  email: string | null;
+  tenant_id: string | null;
+  roles: { slug: string; name: string }[];
+}
+
+async function getMe(token: string): Promise<MeResponse | null> {
   try {
-    const user = await apiFetch<IamUserRead>(`/iam/users/${sub}`);
-    return user.roles.some((r) => r.slug === "platform_admin");
+    return await apiFetch<MeResponse>("/auth/me", { token });
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -29,7 +35,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await getSession();
   if (!session) redirect("/signin");
 
-  const isPlatformAdmin = await getIsPlatformAdmin(session.user.sub);
+  const me = await getMe(session.accessToken);
+  const isPlatformAdmin =
+    me?.roles.some((r) => r.slug === "platform_admin") ?? false;
 
   return (
     <AppShell

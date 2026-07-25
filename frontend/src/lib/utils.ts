@@ -8,11 +8,23 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", { dateStyle: "medium" });
+// Dates are formatted in UTC on purpose.  These helpers run during SSR (server
+// timezone) and again during hydration (browser timezone); leaving the zone
+// ambient makes the two renders disagree, and React responds to a text mismatch
+// by discarding the server HTML and re-rendering the whole document — which
+// detaches every event handler on the page.  Pinning the zone keeps both
+// renders identical and gives operators one unambiguous timestamp.
+const UTC = "UTC";
+
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  dateStyle: "medium",
+  timeZone: UTC,
+});
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
+  timeZone: UTC,
 });
 
 export function formatCurrency(value: number | null | undefined): string {
@@ -50,7 +62,11 @@ export function formatShortDate(value: string | Date | null | undefined): string
   if (!value) return "";
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    timeZone: UTC,
+  });
 }
 
 /** Today's date as an ISO `yyyy-mm-dd` string (for `<input type="date">` defaults). */

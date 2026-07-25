@@ -18,6 +18,7 @@ export interface Session {
     sub: string;
     name: string;
   };
+  accessToken: string;
   expiresAt: string;
 }
 
@@ -32,6 +33,8 @@ export async function getSession(): Promise<Session | null> {
       sub: session.user.sub,
       name: session.user.name ?? "",
     },
+    accessToken:
+      (session as unknown as Record<string, unknown>).accessToken as string,
     expiresAt: session.expires ?? "",
   };
 }

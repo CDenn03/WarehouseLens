@@ -5,8 +5,14 @@
  * concerns (base URL, JSON handling, error normalization and — eventually —
  * auth headers) live in exactly one place.
  *
- * The browser only talks to localhost:3000. Next.js rewrites proxy
- * /api/v1/* to FastAPI at localhost:8000 (see next.config.js).
+ * Two call paths, one function:
+ *
+ *   Browser  → /api/v1/* on the same origin. The BFF proxy route reads the
+ *              HttpOnly session cookie and attaches the bearer token.
+ *   Server   → FastAPI directly (API_URL), with the bearer token attached
+ *              here. Server-side `fetch` has no cookie jar, so routing these
+ *              calls back through the BFF would arrive unauthenticated and
+ *              always 401.
  */
 
 export class ApiError extends Error {
@@ -31,16 +37,37 @@ export interface ApiRequestOptions {
   body?: unknown;
   /** Next.js fetch cache mode. Defaults to `no-store`: operational data must be fresh. */
   cache?: RequestCache;
+  /** Bearer token for server-side calls that bypass the session cookie. */
+  token?: string;
+}
+
+const BACKEND_URL = process.env.API_URL ?? "http://localhost:8000";
+
+/**
+ * Server-side bearer token: use the explicit one when the caller has it,
+ * otherwise fall back to the session so page/layout components don't each
+ * have to thread the token through their service layer.
+ */
+async function resolveServerToken(
+  explicit: string | undefined,
+): Promise<string | undefined> {
+  if (explicit) return explicit;
+  const [{ getServerSession }, { authOptions }] = await Promise.all([
+    import("next-auth"),
+    import("@/lib/authOptions"),
+  ]);
+  const session = await getServerSession(authOptions);
+  return (session as unknown as Record<string, unknown> | null)?.accessToken as
+    | string
+    | undefined;
 }
 
 export async function apiFetch<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const baseUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXTAUTH_URL || "http://localhost:3000";
+  const isServer = typeof window === "undefined";
+  const baseUrl = isServer ? BACKEND_URL : window.location.origin;
   const url = new URL(`/api/v1${path}`, baseUrl);
   if (options.query) {
     for (const [key, value] of Object.entries(options.query)) {
@@ -53,6 +80,13 @@ export async function apiFetch<T>(
   const headers: Record<string, string> = { Accept: "application/json" };
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
+  }
+
+  if (isServer) {
+    const token = await resolveServerToken(options.token);
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } else if (options.token) {
+    headers["Authorization"] = `Bearer ${options.token}`;
   }
 
   let response: Response;
