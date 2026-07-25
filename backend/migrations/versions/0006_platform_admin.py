@@ -61,7 +61,8 @@ def upgrade() -> None:
         sa.text(
             "INSERT INTO role_permissions (role_id, permission_id) VALUES "
             "('b0000000-0000-0000-0000-000000000006', 'dashboard.platform'), "
-            "('b0000000-0000-0000-0000-000000000006', 'platform.tenant.manage') "
+            "('b0000000-0000-0000-0000-000000000006', 'platform.tenant.manage'), "
+            "('b0000000-0000-0000-0000-000000000006', 'iam.user.read') "
             "ON CONFLICT DO NOTHING"
         )
     )
@@ -132,7 +133,8 @@ def downgrade() -> None:
     op.execute(sa.text("DELETE FROM tenants WHERE is_platform = true"))
     op.execute(sa.text(
         "DELETE FROM role_permissions "
-        "WHERE role_id = 'b0000000-0000-0000-0000-000000000006'"
+        "WHERE role_id = 'b0000000-0000-0000-0000-000000000006' "
+        "AND permission_id IN ('dashboard.platform', 'platform.tenant.manage', 'iam.user.read')"
     ))
     op.execute(sa.text("DELETE FROM roles WHERE slug = 'platform_admin'"))
     op.execute(sa.text(

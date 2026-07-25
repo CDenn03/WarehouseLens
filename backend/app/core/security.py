@@ -24,6 +24,7 @@ from uuid import UUID
 import httpx
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -94,9 +95,14 @@ _jwks_cache = _JWKSCache()
 
 
 async def _fetch_jwks() -> dict[str, dict]:
-    """Fetch Keycloak's public keys, cache by kid."""
+    """Fetch Keycloak's public keys, cache by kid.
+
+    Uses keycloak_internal_url when set (Docker deployments where the backend
+    cannot reach the public hostname), otherwise falls back to keycloak_issuer_url.
+    """
     settings = get_settings()
-    url = f"{settings.keycloak_issuer_url}/protocol/openid-connect/certs"
+    base = settings.keycloak_internal_url or settings.keycloak_issuer_url
+    url = f"{base}/protocol/openid-connect/certs"
     async with httpx.AsyncClient() as client:
         resp = await client.get(url, timeout=10.0)
         resp.raise_for_status()
@@ -328,6 +334,26 @@ def resolve_tenant_id(
     raise ForbiddenError("No tenant membership — contact an administrator")
 
 
+def _resolve_identity(
+    db: Session,
+    sub: str,
+    username: str,
+    email: str | None = None,
+    email_verified: bool = False,
+) -> UUID:
+    """Upsert the user and resolve their tenant, committing the result.
+
+    Runs the blocking DB work as one unit so it can be dispatched to a worker
+    thread.  The commit is deliberate: identity bootstrap is a side effect that
+    must survive even when the route itself goes on to raise 403, otherwise the
+    next request repeats the same inserts and contends on the same rows.
+    """
+    upsert_user(db, sub, email=email, username=username)
+    tenant_id = resolve_tenant_id(db, sub, email, email_verified)
+    db.commit()
+    return tenant_id
+
+
 # ── User upsert ────────────────────────────────────────────────────────
 
 
@@ -420,8 +446,7 @@ async def get_current_user(
         sub, username, _perms = x_debug_user.split(":", 2)
 
         # Upsert user and resolve tenant (same path as real JWT).
-        upsert_user(db, sub, email=None, username=username)
-        tenant_id = resolve_tenant_id(db, sub)
+        tenant_id = await run_in_threadpool(_resolve_identity, db, sub, username)
 
         return CurrentUser(sub=sub, username=username, tenant_id=tenant_id)
 
@@ -455,9 +480,12 @@ async def get_current_user(
         email = payload.get("email")
         email_verified = payload.get("email_verified", False)
 
-        # Upsert user and resolve tenant.
-        upsert_user(db, sub, email=email, username=username)
-        tenant_id = resolve_tenant_id(db, sub, email, email_verified)
+        # Upsert user and resolve tenant.  Dispatched to a worker thread: this
+        # is a synchronous DB round trip inside an async dependency, and doing
+        # it inline blocks the event loop for every other in-flight request.
+        tenant_id = await run_in_threadpool(
+            _resolve_identity, db, sub, username, email, email_verified
+        )
 
         # JWT is identity-only — roles are intentionally ignored here.
         # Permissions are resolved from the database by require_permission().

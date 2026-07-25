@@ -76,6 +76,7 @@ ROLE_DEFINITIONS: dict[str, set[str]] = {
     "platform_admin": {
         DASHBOARD_PLATFORM,
         PLATFORM_TENANT_MANAGE,
+        IAM_USER_READ,
     },
 }
 

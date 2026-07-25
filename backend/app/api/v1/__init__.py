@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     agent,
+    auth,
     dashboard,
     forecast,
     iam,
@@ -13,6 +14,7 @@ from app.api.v1 import (
 )
 
 router = APIRouter(prefix="/api/v1")
+router.include_router(auth.router)
 router.include_router(warehouses.router)
 router.include_router(inventory.router)
 router.include_router(procurement.router)

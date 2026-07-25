@@ -44,6 +44,7 @@ app.add_middleware(
 app.include_router(v1_router)
 
 # Registered routers (update when adding new domains):
+# - /api/v1/auth         — identity endpoint (/me) for frontend shell
 # - /api/v1/warehouses   — warehouse CRUD + user assignments
 # - /api/v1/inventory    — products, stock, transactions
 # - /api/v1/procurement  — suppliers, purchase orders

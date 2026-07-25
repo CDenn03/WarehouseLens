@@ -27,10 +27,15 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
     ports: ["8080:8080"]
+    volumes:
+      - keycloak-data:/opt/keycloak/data
 
   backend:
     build: ./backend
     env_file: .env
+    environment:
+      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/realms/warehouselens
+      - KEYCLOAK_CLIENT_ID=warehouselens-backend
     volumes:
       - ./backend:/srv
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -64,3 +69,4 @@ services:
 
 volumes:
   pgdata:
+  keycloak-data:

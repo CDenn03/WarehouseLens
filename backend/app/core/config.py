@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     keycloak_issuer_url: str = "http://localhost:8080/realms/warehouselens"
+    # Internal URL used to fetch JWKS when the backend runs inside Docker
+    # (where "localhost" doesn't reach Keycloak). Defaults to keycloak_issuer_url.
+    keycloak_internal_url: str = ""
     keycloak_client_id: str = "warehouselens-backend"
 
     llm_api_key: str = ""
