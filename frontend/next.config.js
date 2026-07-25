@@ -5,4 +5,4 @@ const nextConfig = {
   // No rewrites needed — the route handler attaches the Bearer token server-side.
 };
 
-module.exports = nextConfig;
+export default nextConfig;
