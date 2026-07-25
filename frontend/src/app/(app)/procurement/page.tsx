@@ -5,15 +5,16 @@ import type { PurchaseOrderStatus } from "@/features/procurement/types";
 export const metadata: Metadata = { title: "Procurement" };
 export const dynamic = "force-dynamic";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: { status?: PurchaseOrderStatus; warehouse_id?: string };
+  searchParams: Promise<{ status?: PurchaseOrderStatus; warehouse_id?: string }>;
 }) {
+  const { status, warehouse_id } = await searchParams;
   return (
     <ProcurementPage
-      status={searchParams.status}
-      warehouseId={searchParams.warehouse_id}
+      status={status}
+      warehouseId={warehouse_id}
     />
   );
 }

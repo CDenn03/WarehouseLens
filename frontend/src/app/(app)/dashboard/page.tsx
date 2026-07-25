@@ -16,9 +16,12 @@ import type { IamUserRead } from "@/features/admin/types";
 
 export const dynamic = "force-dynamic";
 
-async function resolveRole(sub: string): Promise<"platform_admin" | "tenant"> {
+async function resolveRole(
+  sub: string,
+  token: string,
+): Promise<"platform_admin" | "tenant"> {
   try {
-    const user = await apiFetch<IamUserRead>(`/iam/users/${sub}`);
+    const user = await apiFetch<IamUserRead>(`/iam/users/${sub}`, { token });
     if (user.roles.some((r) => r.slug === "platform_admin")) {
       return "platform_admin";
     }
@@ -37,7 +40,7 @@ export default async function Page({
   const session = await getSession();
   if (!session) redirect("/signin");
 
-  const role = await resolveRole(session.user.sub);
+  const role = await resolveRole(session.user.sub, session.accessToken);
   if (role === "platform_admin") {
     redirect("/platform");
   }

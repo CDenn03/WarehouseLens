@@ -58,7 +58,7 @@ async function sessionKey(cookie: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // ── 1. Correlation ID ──────────────────────────────────────────────────
   const requestId =
     request.headers.get("x-request-id") ?? `req-${crypto.randomUUID()}`;

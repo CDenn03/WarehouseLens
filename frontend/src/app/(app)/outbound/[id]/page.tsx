@@ -4,6 +4,7 @@ import { OutboundDetailPage } from "@/features/outbound/components/OutboundDetai
 export const metadata: Metadata = { title: "Outbound request" };
 export const dynamic = "force-dynamic";
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <OutboundDetailPage requestId={params.id} />;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <OutboundDetailPage requestId={id} />;
 }

@@ -5,15 +5,16 @@ import type { OutboundStatus } from "@/features/outbound/types";
 export const metadata: Metadata = { title: "Outbound" };
 export const dynamic = "force-dynamic";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: { status?: OutboundStatus; warehouse_id?: string };
+  searchParams: Promise<{ status?: OutboundStatus; warehouse_id?: string }>;
 }) {
+  const { status, warehouse_id } = await searchParams;
   return (
     <OutboundPage
-      status={searchParams.status}
-      warehouseId={searchParams.warehouse_id}
+      status={status}
+      warehouseId={warehouse_id}
     />
   );
 }

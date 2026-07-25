@@ -4,6 +4,7 @@ import { ProductDetailPage } from "@/features/inventory/components/ProductDetail
 export const metadata: Metadata = { title: "Product detail" };
 export const dynamic = "force-dynamic";
 
-export default function Page({ params }: { params: { id: string } }) {
-  return <ProductDetailPage productId={params.id} />;
+export default async function Page({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <ProductDetailPage productId={id} />;
 }

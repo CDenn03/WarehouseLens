@@ -4,10 +4,11 @@ import { InventoryPage } from "@/features/inventory/components/InventoryPage";
 export const metadata: Metadata = { title: "Inventory" };
 export const dynamic = "force-dynamic";
 
-export default function Page({
+export default async function Page({
   searchParams,
 }: {
-  searchParams: { search?: string };
+  searchParams: Promise<{ search?: string }>;
 }) {
-  return <InventoryPage search={searchParams.search} />;
+  const { search } = await searchParams;
+  return <InventoryPage search={search} />;
 }
