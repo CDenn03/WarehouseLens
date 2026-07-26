@@ -33,7 +33,7 @@ def test_create_and_receive_po_moves_stock(client, seeded, today):
         "/api/v1/inventory/transactions",
         headers=ADMIN,
         params={"product_id": str(seeded["widget"].id)},
-    ).json()
+    ).json()["items"]
     assert any(t["type"] == "receipt" and t["quantity_delta"] == 100 for t in txs)
 
 

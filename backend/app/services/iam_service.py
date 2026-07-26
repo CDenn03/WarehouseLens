@@ -19,22 +19,29 @@ from datetime import datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.core import keycloak_admin
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.core.permissions.warehouse import WAREHOUSE_ASSIGN_USER, WAREHOUSE_GLOBAL
-from app.core.permissions.iam import IAM_USER_ROLE_ASSIGN
+from app.core.permissions.iam import IAM_USER_ROLE_ASSIGN, IAM_ROLE_MANAGE
 from app.models.authorization import (
     AccessDecision,
+    Permission,
     Role,
     RolePermission,
     UserRole,
 )
-from app.models.tenant import User, UserTenant
+from app.models.tenant import Tenant, User, UserTenant
 from app.models.warehouse import UserWarehouseAssignment, Warehouse
 from app.schemas.iam import (
     AssignRoleRequest,
     AssignWarehouseRequest,
+    RoleCreate,
     RoleRead,
+    RoleUpdate,
+    UserActivityEntry,
+    UserCreate,
     UserRead,
+    UserUpdate,
     WarehouseAssignmentRead,
 )
 from app.core.security import CurrentUser
@@ -96,6 +103,10 @@ def _log_decision(
     )
 
 
+def _count(db: Session, stmt) -> int:
+    return db.execute(stmt).scalar_one()
+
+
 def _user_to_read(
     db: Session, user: User, tenant_id: uuid.UUID
 ) -> UserRead:
@@ -150,8 +161,9 @@ def list_users(
     db: Session,
     tenant_id: uuid.UUID,
     include_deleted: bool = False,
+    search: str | None = None,
 ) -> list[UserRead]:
-    """List all users in the given tenant."""
+    """List all users in the given tenant, optionally filtered by search."""
     stmt = (
         select(User)
         .join(UserTenant, UserTenant.user_id == User.id)
@@ -160,6 +172,11 @@ def list_users(
     )
     if not include_deleted:
         stmt = stmt.where(User.deleted_at.is_(None))
+    if search:
+        pattern = f"%{search}%"
+        stmt = stmt.where(
+            User.email.ilike(pattern) | User.username.ilike(pattern)
+        )
     users = db.execute(stmt).scalars().all()
     return [_user_to_read(db, u, tenant_id) for u in users]
 
@@ -170,10 +187,355 @@ def get_user(db: Session, user_id: str, tenant_id: uuid.UUID) -> UserRead:
     return _user_to_read(db, user, tenant_id)
 
 
-def list_roles(db: Session) -> list[RoleRead]:
+def list_roles(db: Session, search: str | None = None) -> list[RoleRead]:
     """All roles — used to populate role picker in the UI."""
-    roles = db.execute(select(Role).order_by(Role.name)).scalars().all()
+    stmt = select(Role).order_by(Role.name)
+    if search:
+        pattern = f"%{search}%"
+        stmt = stmt.where(Role.name.ilike(pattern) | Role.slug.ilike(pattern))
+    roles = db.execute(stmt).scalars().all()
     return [RoleRead(id=r.id, slug=r.slug, name=r.name) for r in roles]
+
+
+def list_permissions(db: Session) -> list:
+    """All permissions from the database."""
+    from app.schemas.iam import PermissionRead
+    rows = db.execute(select(Permission).order_by(Permission.category, Permission.id)).scalars().all()
+    return [PermissionRead(id=r.id, description=r.description, category=r.category) for r in rows]
+
+
+def get_role_detail(db: Session, role_id: uuid.UUID):
+    """Single role with its permissions and assigned users."""
+    from app.schemas.iam import PermissionRead, RoleDetailRead, RoleDetailUser
+    role = _get_role_by_id(db, role_id)
+
+    perm_rows = db.execute(
+        select(Permission)
+        .join(RolePermission, RolePermission.permission_id == Permission.id)
+        .where(RolePermission.role_id == role.id)
+        .order_by(Permission.category, Permission.id)
+    ).scalars().all()
+    permissions = [PermissionRead(id=p.id, description=p.description, category=p.category) for p in perm_rows]
+
+    user_rows = db.execute(
+        select(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .where(UserRole.role_id == role.id)
+        .order_by(User.email)
+    ).scalars().all()
+    users = [RoleDetailUser(id=u.id, email=u.email, username=u.username) for u in user_rows]
+
+    return RoleDetailRead(id=role.id, slug=role.slug, name=role.name, permissions=permissions, users=users)
+
+
+# ── Role CRUD ──────────────────────────────────────────────────────────────
+
+SYSTEM_ROLE_SLUGS = {"platform_admin", "tenant_admin"}
+
+
+def _get_role_by_id(db: Session, role_id: uuid.UUID) -> Role:
+    role = db.get(Role, role_id)
+    if role is None:
+        raise NotFoundError(f"role {role_id} not found")
+    return role
+
+
+def create_role(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    data: RoleCreate,
+) -> RoleRead:
+    """Create a new custom role, optionally assigning permissions."""
+    existing = db.execute(
+        select(Role).where(Role.slug == data.slug)
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise ConflictError(f"role with slug '{data.slug}' already exists")
+
+    role = Role(slug=data.slug, name=data.name)
+    db.add(role)
+    db.flush()
+
+    if data.permission_ids:
+        for pid in data.permission_ids:
+            db.add(RolePermission(role_id=role.id, permission_id=pid))
+
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_ROLE_MANAGE,
+        decision="allow",
+        source="iam_service.create_role",
+        action_context=f"slug={data.slug}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+    return RoleRead(id=role.id, slug=role.slug, name=role.name)
+
+
+def update_role(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    role_id: uuid.UUID,
+    data: RoleUpdate,
+) -> RoleRead:
+    """Update a role's name and/or permissions."""
+    role = _get_role_by_id(db, role_id)
+
+    if data.name is not None and data.name != role.name:
+        role.name = data.name
+
+    if data.permission_ids is not None:
+        # Replace all permissions for this role
+        db.execute(
+            RolePermission.__table__.delete().where(RolePermission.role_id == role.id)
+        )
+        for pid in data.permission_ids:
+            db.add(RolePermission(role_id=role.id, permission_id=pid))
+
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_ROLE_MANAGE,
+        decision="allow",
+        source="iam_service.update_role",
+        action_context=f"role_id={role_id}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+    return RoleRead(id=role.id, slug=role.slug, name=role.name)
+
+
+def delete_role(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    role_id: uuid.UUID,
+) -> None:
+    """Delete a custom role.
+
+    Guards:
+    - System roles (platform_admin, tenant_admin) cannot be deleted.
+    - platform_admin role: can only delete if another user at platform level holds it.
+    - tenant_admin role: can only delete if another user at tenant level holds it.
+    """
+    role = _get_role_by_id(db, role_id)
+
+    if role.slug in SYSTEM_ROLE_SLUGS:
+        raise ConflictError(f"system role '{role.slug}' cannot be deleted")
+
+    # For platform_admin and tenant_admin roles, ensure at least one other
+    # user holds the role before allowing deletion.
+    if role.slug == "platform_admin":
+        platform_tenant = db.execute(
+            select(Tenant).where(Tenant.is_platform.is_(True))
+        ).scalar_one_or_none()
+        if platform_tenant is not None:
+            count = _count(
+                db,
+                select(func.count()).select_from(UserRole).where(
+                    UserRole.role_id == role.id,
+                    UserRole.tenant_id == platform_tenant.id,
+                ),
+            )
+            if count <= 1:
+                raise ConflictError(
+                    "cannot delete platform_admin role: "
+                    "at least one platform admin must exist"
+                )
+
+    if role.slug == "tenant_admin":
+        # Check across all tenants — tenant_admin is a shared role definition.
+        # We check each tenant individually to see if deletion would leave
+        # any tenant without an admin.
+        tenant_ids = db.execute(
+            select(func.distinct(UserRole.tenant_id)).where(
+                UserRole.role_id == role.id,
+            )
+        ).scalars().all()
+        for tid in tenant_ids:
+            count = _count(
+                db,
+                select(func.count()).select_from(UserRole).where(
+                    UserRole.role_id == role.id,
+                    UserRole.tenant_id == tid,
+                ),
+            )
+            if count <= 1:
+                raise ConflictError(
+                    f"cannot delete tenant_admin role: "
+                    f"tenant {tid} would have no admin"
+                )
+
+    db.delete(role)
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_ROLE_MANAGE,
+        decision="allow",
+        source="iam_service.delete_role",
+        action_context=f"slug={role.slug}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+
+
+# ── User CRUD ──────────────────────────────────────────────────────────────
+
+
+def create_user(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    data: UserCreate,
+) -> UserRead:
+    """Create a new user by provisioning a Keycloak account.
+
+    The user is added to the actor's tenant.
+    """
+    tenant_id = actor.tenant_id
+
+    # Check for duplicate email in tenant
+    existing = db.execute(
+        select(User)
+        .join(UserTenant, UserTenant.user_id == User.id)
+        .where(
+            UserTenant.tenant_id == tenant_id,
+            func.lower(User.email) == data.email,
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        raise ConflictError(f"user with email '{data.email}' already exists in this tenant")
+
+    result = keycloak_admin.provision_user(data.email, username=data.username)
+
+    user = _upsert_local_user(db, result.user.id, result.user.email or data.email, result.user.username or data.username)
+    if db.get(UserTenant, (user.id, tenant_id)) is None:
+        db.add(UserTenant(user_id=user.id, tenant_id=tenant_id))
+
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_USER_ROLE_ASSIGN,
+        decision="allow",
+        source="iam_service.create_user",
+        action_context=f"email={data.email}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+    return _user_to_read(db, user, tenant_id)
+
+
+def update_user(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    target_user_id: str,
+    data: UserUpdate,
+) -> UserRead:
+    """Update a user's email/username in both Keycloak and the local mirror."""
+    tenant_id = actor.tenant_id
+    user = _get_user_in_tenant(db, target_user_id, tenant_id)
+
+    if data.email is not None and data.email != user.email:
+        clash = db.execute(
+            select(User).where(
+                func.lower(User.email) == data.email,
+                User.id != target_user_id,
+            )
+        ).scalars().first()
+        if clash is not None:
+            raise ConflictError(f"another user already uses {data.email}")
+
+    keycloak_admin.update_user(target_user_id, email=data.email, username=data.username)
+
+    if data.email is not None:
+        user.email = data.email
+    if data.username is not None:
+        user.username = data.username
+
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_USER_ROLE_ASSIGN,
+        decision="allow",
+        source="iam_service.update_user",
+        action_context=f"target={target_user_id}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+    return _user_to_read(db, user, tenant_id)
+
+
+def delete_user(
+    db: Session,
+    *,
+    actor: CurrentUser,
+    target_user_id: str,
+) -> None:
+    """Soft-delete a user and disable their Keycloak account."""
+    tenant_id = actor.tenant_id
+    user = _get_user_in_tenant(db, target_user_id, tenant_id)
+
+    if user.deleted_at is not None:
+        raise ConflictError(f"user {target_user_id} is already soft-deleted")
+
+    user.deleted_at = datetime.now(timezone.utc)
+
+    try:
+        keycloak_admin.set_enabled(target_user_id, False)
+    except Exception:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning("could not disable Keycloak account %s", target_user_id, exc_info=True)
+
+    db.add(AccessDecision(
+        user_id=actor.sub,
+        permission_id=IAM_USER_ROLE_ASSIGN,
+        decision="allow",
+        source="iam_service.delete_user",
+        action_context=f"target={target_user_id}",
+        created_by=actor.sub,
+    ))
+    db.commit()
+
+
+def get_user_activity(
+    db: Session, user_id: str, tenant_id: uuid.UUID, limit: int = 20
+) -> list[UserActivityEntry]:
+    """Recent IAM activity for a specific user within the tenant.
+
+    Reconstructs events from the access_decisions audit trail, which
+    records every assign/revoke operation.
+    """
+    _get_user_in_tenant(db, user_id, tenant_id)
+
+    rows = db.execute(
+        select(AccessDecision)
+        .where(
+            AccessDecision.user_id == user_id,
+            AccessDecision.source.like("iam_service.%"),
+        )
+        .order_by(AccessDecision.decided_at.desc())
+        .limit(limit)
+    ).scalars().all()
+
+    entries: list[UserActivityEntry] = []
+    for row in rows:
+        action = (row.source or "").replace("iam_service.", "")
+        if "role" in action:
+            kind = "role_assigned" if "assign" in action else "role_revoked"
+        else:
+            kind = "warehouse_assigned" if "assign" in action else "warehouse_revoked"
+
+        actor_id = row.created_by or "unknown"
+        entries.append(
+            UserActivityEntry(
+                kind=kind,
+                target=row.permission_id,
+                actor_label=actor_id,
+                occurred_at=row.decided_at,
+            )
+        )
+
+    return entries
 
 
 # ── Role assignment ────────────────────────────────────────────────────────

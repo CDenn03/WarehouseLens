@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, InsufficientStockError, NotFoundError
+from app.core.pagination import PaginationParams, paginate
 from app.models import (
     OutboundRequest,
     OutboundRequestItem,
@@ -30,6 +31,7 @@ from app.models.inventory import TransactionType
 from app.models.outbound import OutboundStatus, PickListStatus, ShipmentStatus
 from app.schemas.outbound import (
     OutboundRequestCreate,
+    OutboundRequestRead,
     PickItemUpdate,
     PickListCreate,
     SalesOrderCreate,
@@ -98,18 +100,20 @@ def create_internal_transfer(db: Session, data: OutboundRequestCreate) -> Outbou
 
 def list_outbound_requests(
     db: Session,
+    params: PaginationParams,
     visible_warehouse_ids: set[UUID] | None,
     warehouse_id: UUID | None = None,
     status: str | None = None,
-) -> list[OutboundRequest]:
-    stmt = select(OutboundRequest).order_by(OutboundRequest.created_at.desc())
+) -> dict:
+    stmt = select(OutboundRequest)
     if warehouse_id is not None:
         stmt = stmt.where(OutboundRequest.source_warehouse_id == warehouse_id)
     elif visible_warehouse_ids is not None:
         stmt = stmt.where(OutboundRequest.source_warehouse_id.in_(visible_warehouse_ids))
     if status is not None:
         stmt = stmt.where(OutboundRequest.status == status)
-    return list(db.execute(stmt).scalars())
+    stmt = stmt.order_by(OutboundRequest.created_at.desc())
+    return paginate(db, stmt, params, schema=OutboundRequestRead)
 
 
 def get_outbound_request(db: Session, request_id: UUID) -> OutboundRequest:

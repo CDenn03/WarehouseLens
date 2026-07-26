@@ -19,12 +19,14 @@ Endpoints:
 """
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.pagination import PaginationParams
 from app.core.permissions.platform import PLATFORM_TENANT_MANAGE
 from app.core.security import CurrentUser, require_permission
+from app.schemas.common import PaginatedResponse
 from app.schemas.platform import (
     PasswordResetRead,
     PlatformAdminCreate,
@@ -44,12 +46,23 @@ router = APIRouter(prefix="/platform", tags=["platform"])
 # ── Tenant endpoints ───────────────────────────────────────────────────────
 
 
-@router.get("/tenants", response_model=list[TenantRead])
+def _pagination(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: str | None = Query(default=None),
+    sort_by: str | None = Query(default=None),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+) -> PaginationParams:
+    return PaginationParams(page=page, page_size=page_size, search=search, sort_by=sort_by, sort_order=sort_order)
+
+
+@router.get("/tenants", response_model=PaginatedResponse)
 def list_tenants(
+    params: PaginationParams = Depends(_pagination),
     db: Session = Depends(get_db),
     _actor: CurrentUser = Depends(require_permission(PLATFORM_TENANT_MANAGE)),
 ):
-    return platform_service.list_tenants(db)
+    return platform_service.list_tenants(db, params)
 
 
 @router.post("/tenants", response_model=TenantWithAdminRead, status_code=201)
@@ -109,12 +122,13 @@ def reset_tenant_admin_password(
 # ── Platform admin endpoints ───────────────────────────────────────────────
 
 
-@router.get("/admins", response_model=list[PlatformAdminRead])
+@router.get("/admins", response_model=PaginatedResponse)
 def list_platform_admins(
+    params: PaginationParams = Depends(_pagination),
     db: Session = Depends(get_db),
     _actor: CurrentUser = Depends(require_permission(PLATFORM_TENANT_MANAGE)),
 ):
-    return platform_service.list_platform_admins(db)
+    return platform_service.list_platform_admins(db, params)
 
 
 @router.post("/admins", response_model=PlatformAdminWithCredentialRead, status_code=201)

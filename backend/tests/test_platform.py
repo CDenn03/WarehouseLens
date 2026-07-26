@@ -172,7 +172,7 @@ def test_list_tenants_excludes_platform(client, platform_seed):
         headers=_h(platform_seed["platform_admin"].id),
     )
     assert resp.status_code == 200, resp.json()
-    names = [t["name"] for t in resp.json()]
+    names = [t["name"] for t in resp.json()["items"]]
     assert "platform" not in names
     assert "acme" in names
 
@@ -376,7 +376,7 @@ def test_create_platform_admin_by_email(client, platform_seed, fake_keycloak):
     listed = client.get(
         "/api/v1/platform/admins", headers=_h(platform_seed["platform_admin"].id)
     ).json()
-    assert body["admin"]["id"] in [a["id"] for a in listed]
+    assert body["admin"]["id"] in [a["id"] for a in listed["items"]]
 
 
 def test_create_platform_admin_by_user_id(client, platform_seed, fake_keycloak):

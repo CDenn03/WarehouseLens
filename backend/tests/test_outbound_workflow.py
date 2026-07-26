@@ -111,7 +111,7 @@ def test_internal_transfer_moves_stock_between_warehouses(client, seeded):
         "/api/v1/inventory/transactions",
         headers=ADMIN,
         params={"product_id": str(seeded["gadget"].id)},
-    ).json()
+    ).json()["items"]
     types = {t["type"] for t in txs}
     assert {"transfer_out", "transfer_in"} <= types
 

@@ -5,19 +5,34 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.pagination import PaginationParams, paginate
 from app.models import InventoryTransaction, Product, Warehouse, WarehouseStock
-from app.schemas.inventory import TransactionCreate
+from app.schemas.inventory import TransactionCreate, TransactionRead
 from app.schemas.product import ProductCreate, ProductStockBreakdown, ProductRead, WarehouseStockRead
+
+PRODUCT_SORT_FIELDS = {
+    "sku": Product.sku,
+    "name": Product.name,
+    "category": Product.category,
+    "unit_cost": Product.unit_cost,
+    "created_at": Product.id,
+}
 
 
 # --- products -------------------------------------------------------------
 
-def list_products(db: Session, search: str | None = None) -> list[Product]:
-    stmt = select(Product).order_by(Product.sku)
+def list_products(
+    db: Session,
+    params: PaginationParams,
+    search: str | None = None,
+) -> dict:
+    stmt = select(Product)
     if search:
         pattern = f"%{search}%"
         stmt = stmt.where(Product.sku.ilike(pattern) | Product.name.ilike(pattern))
-    return list(db.execute(stmt).scalars())
+    sort_col = PRODUCT_SORT_FIELDS.get(params.sort_by or "created_at", Product.id)
+    stmt = stmt.order_by(sort_col.desc() if params.sort_order == "desc" else sort_col.asc())
+    return paginate(db, stmt, params, schema=ProductRead)
 
 
 def get_product(db: Session, product_id: UUID) -> Product:
@@ -117,14 +132,14 @@ def create_manual_transaction(db: Session, data: TransactionCreate) -> Inventory
 
 def list_transactions(
     db: Session,
+    params: PaginationParams,
     visible_warehouse_ids: set[UUID] | None,
     warehouse_id: UUID | None = None,
     product_id: UUID | None = None,
     date_from: date | None = None,
     date_to: date | None = None,
-    limit: int = 200,
-) -> list[InventoryTransaction]:
-    stmt = select(InventoryTransaction).order_by(InventoryTransaction.occurred_at.desc()).limit(limit)
+) -> dict:
+    stmt = select(InventoryTransaction)
     if warehouse_id is not None:
         stmt = stmt.where(InventoryTransaction.warehouse_id == warehouse_id)
     elif visible_warehouse_ids is not None:
@@ -139,4 +154,5 @@ def list_transactions(
         stmt = stmt.where(
             InventoryTransaction.occurred_at <= datetime.combine(date_to, time.max, timezone.utc)
         )
-    return list(db.execute(stmt).scalars())
+    stmt = stmt.order_by(InventoryTransaction.occurred_at.desc())
+    return paginate(db, stmt, params, schema=TransactionRead)

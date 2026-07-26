@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from app.core import keycloak_admin
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.pagination import PaginationParams, paginate
 from app.core.permissions.platform import PLATFORM_TENANT_MANAGE
 from app.core.security import CurrentUser
 from app.models.authorization import AccessDecision, Role, UserRole
@@ -228,14 +229,37 @@ def _provision_admin(
 # ── Tenant CRUD ────────────────────────────────────────────────────────────
 
 
-def list_tenants(db: Session) -> list[TenantRead]:
-    """All non-platform tenants."""
-    tenants = db.execute(
+TENANT_SORT_FIELDS = {
+    "name": Tenant.name,
+    "created_at": Tenant.created_at,
+}
+
+
+def list_tenants(db: Session, params: PaginationParams) -> dict:
+    """All non-platform tenants, paginated."""
+    base_stmt = (
         select(Tenant)
         .where(Tenant.is_platform.is_(False))
-        .order_by(Tenant.created_at)
-    ).scalars().all()
-    return [_tenant_to_read(db, t) for t in tenants]
+    )
+    if params.search:
+        pattern = f"%{params.search}%"
+        base_stmt = base_stmt.where(
+            Tenant.name.ilike(pattern) | Tenant.admin_email.ilike(pattern)
+        )
+    sort_col = TENANT_SORT_FIELDS.get(params.sort_by or "created_at", Tenant.created_at)
+    stmt = base_stmt.order_by(sort_col.desc() if params.sort_order == "desc" else sort_col.asc())
+
+    from app.core.pagination import count_rows
+    total = count_rows(db, base_stmt)
+    tenants = db.execute(stmt.offset(params.offset).limit(params.page_size)).scalars().all()
+    total_pages = max(1, (total + params.page_size - 1) // params.page_size)
+    return {
+        "items": [_tenant_to_read(db, t) for t in tenants],
+        "total": total,
+        "page": params.page,
+        "page_size": params.page_size,
+        "total_pages": total_pages,
+    }
 
 
 def get_tenant(db: Session, tenant_id: uuid.UUID) -> TenantRead:
@@ -419,34 +443,58 @@ def _platform_admin_read(db: Session, user_id: str, tenant_id: uuid.UUID) -> Pla
     )
 
 
-def list_platform_admins(db: Session) -> list[PlatformAdminRead]:
-    """List all users who hold the platform_admin role."""
+PLATFORM_ADMIN_SORT_FIELDS = {
+    "email": User.email,
+    "username": User.username,
+    "assigned_at": UserRole.assigned_at,
+}
+
+
+def list_platform_admins(db: Session, params: PaginationParams) -> dict:
+    """List all users who hold the platform_admin role, paginated."""
     platform_tenant = _get_platform_tenant(db)
     role = db.execute(
         select(Role).where(Role.slug == PLATFORM_ADMIN_ROLE)
     ).scalar_one_or_none()
     if role is None:
-        return []
+        return {"items": [], "total": 0, "page": 1, "page_size": params.page_size, "total_pages": 1}
 
-    rows = db.execute(
+    base_stmt = (
         select(User, UserRole.assigned_at)
         .join(UserRole, UserRole.user_id == User.id)
         .where(
             UserRole.role_id == role.id,
             UserRole.tenant_id == platform_tenant.id,
         )
-        .order_by(UserRole.assigned_at)
-    ).all()
-
-    return [
-        PlatformAdminRead(
-            id=row.User.id,
-            email=row.User.email,
-            username=row.User.username,
-            assigned_at=row.assigned_at,
+    )
+    if params.search:
+        pattern = f"%{params.search}%"
+        base_stmt = base_stmt.where(
+            User.email.ilike(pattern) | User.username.ilike(pattern)
         )
-        for row in rows
-    ]
+    from app.core.pagination import count_rows
+    total = count_rows(db, base_stmt)
+
+    sort_col = PLATFORM_ADMIN_SORT_FIELDS.get(params.sort_by or "assigned_at", UserRole.assigned_at)
+    stmt = base_stmt.order_by(sort_col.desc() if params.sort_order == "desc" else sort_col.asc())
+    rows = db.execute(stmt.offset(params.offset).limit(params.page_size)).all()
+
+    total_pages = max(1, (total + params.page_size - 1) // params.page_size)
+    return {
+        "items": [
+            PlatformAdminRead(
+                id=row.User.id,
+                email=row.User.email,
+                username=row.User.username,
+                assigned_at=row.assigned_at,
+            )
+            for row in rows
+        ],
+        "total": total,
+        "page": params.page,
+        "page_size": params.page_size,
+        "total_pages": total_pages,
+    }
 
 
 def create_platform_admin(

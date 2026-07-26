@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.pagination import PaginationParams
 from app.core.permissions.outbound import (
     OUTBOUND_PICK_LIST_MANAGE,
     OUTBOUND_SALES_ORDER_CREATE,
@@ -18,6 +19,7 @@ from app.core.security import (
     require_permission,
     scope_filter_warehouse_ids,
 )
+from app.schemas.common import PaginatedResponse
 from app.schemas.outbound import (
     OutboundRequestCreate,
     OutboundRequestDetail,
@@ -37,6 +39,15 @@ from app.services.warehouse_service import get_warehouse
 router = APIRouter(tags=["outbound"])
 
 
+def _pagination(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    sort_by: str | None = Query(default=None),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+) -> PaginationParams:
+    return PaginationParams(page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order)
+
+
 @router.post("/sales-orders", response_model=SalesOrderRead, status_code=201)
 def create_sales_order(
     data: SalesOrderCreate,
@@ -52,8 +63,9 @@ def create_sales_order(
     return response
 
 
-@router.get("/outbound-requests", response_model=list[OutboundRequestRead])
+@router.get("/outbound-requests", response_model=PaginatedResponse)
 def list_outbound_requests(
+    params: PaginationParams = Depends(_pagination),
     warehouse_id: UUID | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
@@ -62,7 +74,7 @@ def list_outbound_requests(
     if warehouse_id is not None:
         enforce_warehouse_scope(db, user, warehouse_id)
     visible = scope_filter_warehouse_ids(db, user)
-    return outbound_service.list_outbound_requests(db, visible, warehouse_id, status)
+    return outbound_service.list_outbound_requests(db, params, visible, warehouse_id, status)
 
 
 @router.get("/outbound-requests/{request_id}", response_model=OutboundRequestDetail)

@@ -1,9 +1,10 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.pagination import PaginationParams
 from app.core.permissions.procurement import (
     PROCUREMENT_ORDER_CREATE,
     PROCUREMENT_ORDER_RECEIVE,
@@ -17,6 +18,7 @@ from app.core.security import (
     require_permission,
     scope_filter_warehouse_ids,
 )
+from app.schemas.common import PaginatedResponse
 from app.schemas.procurement import (
     PurchaseOrderCreate,
     PurchaseOrderRead,
@@ -28,6 +30,15 @@ from app.services.permission_service import log_access_decision
 from app.services.warehouse_service import get_warehouse
 
 router = APIRouter(tags=["procurement"])
+
+
+def _pagination(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    sort_by: str | None = Query(default=None),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$"),
+) -> PaginationParams:
+    return PaginationParams(page=page, page_size=page_size, sort_by=sort_by, sort_order=sort_order)
 
 
 @router.get("/suppliers", response_model=list[SupplierRead])
@@ -46,8 +57,9 @@ def create_supplier(
     return procurement_service.create_supplier(db, data)
 
 
-@router.get("/purchase-orders", response_model=list[PurchaseOrderRead])
+@router.get("/purchase-orders", response_model=PaginatedResponse)
 def list_purchase_orders(
+    params: PaginationParams = Depends(_pagination),
     warehouse_id: UUID | None = None,
     status: str | None = None,
     db: Session = Depends(get_db),
@@ -56,7 +68,7 @@ def list_purchase_orders(
     if warehouse_id is not None:
         enforce_warehouse_scope(db, user, warehouse_id)
     visible = scope_filter_warehouse_ids(db, user)
-    return procurement_service.list_purchase_orders(db, visible, warehouse_id, status)
+    return procurement_service.list_purchase_orders(db, params, visible, warehouse_id, status)
 
 
 @router.post("/purchase-orders", response_model=PurchaseOrderRead, status_code=201)

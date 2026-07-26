@@ -5,12 +5,19 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
+from app.core.pagination import PaginationParams, paginate
 from app.models import PurchaseOrder, PurchaseOrderItem, Supplier
 from app.models.inventory import TransactionType
 from app.models.procurement import POStatus
-from app.schemas.procurement import PurchaseOrderCreate, PurchaseOrderReceive
+from app.schemas.procurement import PurchaseOrderCreate, PurchaseOrderRead, PurchaseOrderReceive
 from app.schemas.supplier import SupplierCreate
 from app.services import inventory_service, warehouse_service
+
+PO_SORT_FIELDS = {
+    "order_date": PurchaseOrder.order_date,
+    "status": PurchaseOrder.status,
+    "created_at": PurchaseOrder.id,
+}
 
 
 # --- suppliers ------------------------------------------------------------
@@ -30,18 +37,21 @@ def create_supplier(db: Session, data: SupplierCreate) -> Supplier:
 
 def list_purchase_orders(
     db: Session,
+    params: PaginationParams,
     visible_warehouse_ids: set[UUID] | None,
     warehouse_id: UUID | None = None,
     status: str | None = None,
-) -> list[PurchaseOrder]:
-    stmt = select(PurchaseOrder).order_by(PurchaseOrder.order_date.desc())
+) -> dict:
+    stmt = select(PurchaseOrder)
     if warehouse_id is not None:
         stmt = stmt.where(PurchaseOrder.destination_warehouse_id == warehouse_id)
     elif visible_warehouse_ids is not None:
         stmt = stmt.where(PurchaseOrder.destination_warehouse_id.in_(visible_warehouse_ids))
     if status is not None:
         stmt = stmt.where(PurchaseOrder.status == status)
-    return list(db.execute(stmt).scalars())
+    sort_col = PO_SORT_FIELDS.get(params.sort_by or "created_at", PurchaseOrder.id)
+    stmt = stmt.order_by(sort_col.desc() if params.sort_order == "desc" else sort_col.asc())
+    return paginate(db, stmt, params, schema=PurchaseOrderRead)
 
 
 def get_purchase_order(db: Session, po_id: UUID) -> PurchaseOrder:
