@@ -16,6 +16,7 @@ export interface TableProps<T> {
   emptyMessage?: string;
   /** Per-row class hook (e.g. to highlight rows below reorder point). */
   rowClassName?: (row: T) => string | undefined;
+  isLoading?: boolean;
 }
 
 export function Table<T>({
@@ -24,46 +25,65 @@ export function Table<T>({
   rowKey,
   emptyMessage = "Nothing here yet.",
   rowClassName,
+  isLoading = false,
 }: TableProps<T>) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-brand-100 text-sm">
+    <div className="relative w-full">
+      {isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+          <div
+            className="h-6 w-6 animate-spin rounded-full border-2 border-t-transparent"
+            style={{ borderColor: "var(--border)", borderTopColor: "transparent" }}
+          />
+        </div>
+      )}
+      <table className="w-full text-sm">
         <thead>
-          <tr>
+          <tr style={{ background: "var(--green-050)" }}>
             {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
                 className={cn(
-                  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-ink-mute",
+                  "px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide",
                   column.className,
                 )}
+                style={{ color: "var(--green-900)" }}
               >
                 {column.header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-brand-100">
+        <tbody>
           {rows.length === 0 ? (
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-4 py-8 text-center text-sm text-ink-mute"
+                className="px-4 py-8 text-center text-sm"
+                style={{ color: "var(--ink-mute)" }}
               >
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            rows.map((row, index) => (
               <tr
                 key={rowKey(row)}
-                className={cn("hover:bg-brand-50", rowClassName?.(row))}
+                className={cn(
+                  "transition-colors hover:bg-brand-50",
+                  rowClassName?.(row),
+                )}
+                style={{
+                  background: index % 2 === 0 ? "var(--surface-panel)" : "var(--bg-alt)",
+                  borderTop: "1px solid var(--border-soft)",
+                }}
               >
                 {columns.map((column) => (
                   <td
                     key={column.key}
-                    className={cn("px-4 py-3 text-ink-soft", column.className)}
+                    className={cn("px-4 py-3", column.className)}
+                    style={{ color: "var(--ink-soft)" }}
                   >
                     {column.render(row)}
                   </td>
