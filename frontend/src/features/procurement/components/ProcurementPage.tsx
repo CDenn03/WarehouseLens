@@ -6,20 +6,19 @@ import { getErrorMessage } from "@/lib/utils";
 import {
   getProducts,
   getWarehouses,
+  type PaginatedResponse,
 } from "@/features/inventory/services/inventoryService";
 import type { Product, Warehouse } from "@/features/inventory/types";
 import {
-  getPurchaseOrders,
   getSuppliers,
 } from "@/features/procurement/services/procurementService";
 import type {
-  PurchaseOrder,
   PurchaseOrderStatus,
   Supplier,
 } from "@/features/procurement/types";
 import { CreatePurchaseOrderModal } from "@/features/procurement/components/CreatePurchaseOrderModal";
 import { NewSupplierModal } from "@/features/procurement/components/NewSupplierModal";
-import { PurchaseOrdersTable } from "@/features/procurement/components/PurchaseOrdersTable";
+import { PurchaseOrdersTableClient } from "@/features/procurement/components/PurchaseOrdersTableClient";
 import { SuppliersList } from "@/features/procurement/components/SuppliersList";
 
 const statusOptions: Array<{ value: PurchaseOrderStatus; label: string }> = [
@@ -37,13 +36,11 @@ export async function ProcurementPage({
   warehouseId?: string;
 }) {
   let suppliers: Supplier[];
-  let purchaseOrders: PurchaseOrder[];
   let warehouses: Warehouse[];
-  let products: Product[];
+  let products: PaginatedResponse<Product>;
   try {
-    [suppliers, purchaseOrders, warehouses, products] = await Promise.all([
+    [suppliers, warehouses, products] = await Promise.all([
       getSuppliers(),
-      getPurchaseOrders({ status, warehouse_id: warehouseId }),
       getWarehouses(),
       getProducts(),
     ]);
@@ -67,7 +64,7 @@ export async function ProcurementPage({
             <CreatePurchaseOrderModal
               suppliers={suppliers}
               warehouses={warehouses}
-              products={products}
+              products={products.items}
             />
           </>
         }
@@ -99,10 +96,11 @@ export async function ProcurementPage({
             }
             flush
           >
-            <PurchaseOrdersTable
-              orders={purchaseOrders}
+            <PurchaseOrdersTableClient
               suppliers={suppliers}
               warehouses={warehouses}
+              warehouseId={warehouseId}
+              status={status}
             />
           </Card>
         </div>

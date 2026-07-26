@@ -7,6 +7,14 @@ import type {
   Supplier,
 } from "@/features/procurement/types";
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export function getSuppliers(): Promise<Supplier[]> {
   return apiFetch<Supplier[]>("/suppliers");
 }
@@ -17,9 +25,10 @@ export function createSupplier(input: NewSupplierInput): Promise<Supplier> {
 
 export function getPurchaseOrders(
   filters: PurchaseOrderFilters = {},
-): Promise<PurchaseOrder[]> {
-  return apiFetch<PurchaseOrder[]>("/purchase-orders", {
-    query: { ...filters },
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<PurchaseOrder>> {
+  return apiFetch<PaginatedResponse<PurchaseOrder>>("/purchase-orders", {
+    query: { ...filters, ...params },
   });
 }
 

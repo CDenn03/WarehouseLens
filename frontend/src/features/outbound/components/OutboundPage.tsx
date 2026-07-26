@@ -8,11 +8,10 @@ import {
   getWarehouses,
 } from "@/features/inventory/services/inventoryService";
 import type { Product, Warehouse } from "@/features/inventory/types";
-import { getOutboundRequests } from "@/features/outbound/services/outboundService";
-import type { OutboundRequest, OutboundStatus } from "@/features/outbound/types";
+import type { OutboundStatus } from "@/features/outbound/types";
 import { NewSalesOrderModal } from "@/features/outbound/components/NewSalesOrderModal";
 import { NewTransferModal } from "@/features/outbound/components/NewTransferModal";
-import { OutboundTable } from "@/features/outbound/components/OutboundTable";
+import { OutboundTableClient } from "@/features/outbound/components/OutboundTableClient";
 
 const statusOptions: Array<{ value: OutboundStatus; label: string }> = [
   { value: "requested", label: "Requested" },
@@ -30,15 +29,15 @@ export async function OutboundPage({
   status?: OutboundStatus;
   warehouseId?: string;
 }) {
-  let requests: OutboundRequest[];
   let warehouses: Warehouse[];
   let products: Product[];
   try {
-    [requests, warehouses, products] = await Promise.all([
-      getOutboundRequests({ status, warehouse_id: warehouseId }),
+    const [warehouseResult, productResult] = await Promise.all([
       getWarehouses(),
       getProducts(),
     ]);
+    warehouses = warehouseResult;
+    products = productResult.items;
   } catch (error) {
     return (
       <div className="space-y-6">
@@ -84,7 +83,11 @@ export async function OutboundPage({
         }
         flush
       >
-        <OutboundTable requests={requests} warehouses={warehouses} />
+        <OutboundTableClient
+          warehouses={warehouses}
+          warehouseId={warehouseId}
+          status={status}
+        />
       </Card>
     </div>
   );

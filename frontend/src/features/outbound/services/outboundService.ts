@@ -11,11 +11,20 @@ import type {
   UpdatePickListItemInput,
 } from "@/features/outbound/types";
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export function getOutboundRequests(
   filters: OutboundFilters = {},
-): Promise<OutboundRequest[]> {
-  return apiFetch<OutboundRequest[]>("/outbound-requests", {
-    query: { ...filters },
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<OutboundRequest>> {
+  return apiFetch<PaginatedResponse<OutboundRequest>>("/outbound-requests", {
+    query: { ...filters, ...params },
   });
 }
 

@@ -47,11 +47,14 @@ export async function OutboundDetailPage({ requestId }: { requestId: string }) {
   let warehouses: Warehouse[];
   let products: Product[];
   try {
-    [request, warehouses, products] = await Promise.all([
+    const [requestResult, warehouseResult, productResult] = await Promise.all([
       getOutboundRequest(requestId),
       getWarehouses(),
       getProducts(),
     ]);
+    request = requestResult;
+    warehouses = warehouseResult;
+    products = productResult.items;
   } catch (error) {
     return (
       <div className="space-y-6">

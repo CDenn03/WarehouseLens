@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/Button";
+import { PackageCheck } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
 import { submitReceivePurchaseOrder } from "@/features/procurement/actions/procurementActions";
 
 export function ReceivePurchaseOrderButton({
@@ -14,10 +15,9 @@ export function ReceivePurchaseOrderButton({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button
-        size="sm"
-        variant="secondary"
-        isLoading={isPending}
+      <ActionButton
+        icon={<PackageCheck className="h-4 w-4" style={{ color: "var(--green-900)" }} />}
+        label="Receive"
         onClick={() => {
           setError(null);
           startTransition(async () => {
@@ -27,9 +27,8 @@ export function ReceivePurchaseOrderButton({
             }
           });
         }}
-      >
-        Receive
-      </Button>
+        disabled={isPending}
+      />
       {error && <p className="text-xs text-error">{error}</p>}
     </div>
   );

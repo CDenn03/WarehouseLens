@@ -11,12 +11,25 @@ import type {
   Warehouse,
 } from "@/features/inventory/types";
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 export function getWarehouses(): Promise<Warehouse[]> {
   return apiFetch<Warehouse[]>("/warehouses");
 }
 
-export function getProducts(search?: string): Promise<Product[]> {
-  return apiFetch<Product[]>("/products", { query: { search } });
+export function getProducts(
+  search?: string,
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<Product>> {
+  return apiFetch<PaginatedResponse<Product>>("/products", {
+    query: { search, ...params },
+  });
 }
 
 /**
@@ -24,8 +37,8 @@ export function getProducts(search?: string): Promise<Product[]> {
  * we need. Fine at catalog scale; swap for a dedicated endpoint if one appears.
  */
 export async function getProduct(productId: string): Promise<Product | null> {
-  const products = await getProducts();
-  return products.find((p) => String(p.id) === String(productId)) ?? null;
+  const result = await getProducts();
+  return result.items.find((p) => String(p.id) === String(productId)) ?? null;
 }
 
 export function createProduct(input: NewProductInput): Promise<Product> {
@@ -40,9 +53,10 @@ export async function getProductStock(productId: string): Promise<ProductStock[]
 
 export function getTransactions(
   filters: TransactionFilters = {},
-): Promise<InventoryTransaction[]> {
-  return apiFetch<InventoryTransaction[]>("/inventory/transactions", {
-    query: { ...filters },
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<InventoryTransaction>> {
+  return apiFetch<PaginatedResponse<InventoryTransaction>>("/inventory/transactions", {
+    query: { ...filters, ...params },
   });
 }
 

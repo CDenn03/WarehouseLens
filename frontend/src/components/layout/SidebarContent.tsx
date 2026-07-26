@@ -13,12 +13,7 @@ export interface NavItem {
 
 const iconClass = "h-5 w-5 shrink-0";
 
-function isActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const active = isActive(pathname, item.href);
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
@@ -103,7 +98,21 @@ export function SidebarContent({
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
         {items.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} />
+          <NavLink
+            key={item.href}
+            item={item}
+            active={
+              pathname === item.href ||
+              (pathname.startsWith(`${item.href}/`) &&
+                !items.some(
+                  (other) =>
+                    other.href !== item.href &&
+                    (pathname === other.href ||
+                      pathname.startsWith(`${other.href}/`)) &&
+                    other.href.startsWith(item.href),
+                ))
+            }
+          />
         ))}
       </nav>
 

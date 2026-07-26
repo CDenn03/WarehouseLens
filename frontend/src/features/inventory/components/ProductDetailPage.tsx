@@ -28,12 +28,16 @@ export async function ProductDetailPage({ productId }: { productId: string }) {
   let warehouses: Warehouse[];
   let transactions: InventoryTransaction[];
   try {
-    [products, stock, warehouses, transactions] = await Promise.all([
+    const [productResult, stockResult, warehouseResult, txResult] = await Promise.all([
       getProducts(),
       getProductStock(productId),
       getWarehouses(),
       getTransactions({ product_id: productId }),
     ]);
+    products = productResult.items;
+    stock = stockResult;
+    warehouses = warehouseResult;
+    transactions = txResult.items;
   } catch (error) {
     return (
       <div className="space-y-6">
