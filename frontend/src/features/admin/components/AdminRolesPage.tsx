@@ -1,102 +1,148 @@
-import { Card } from "@/components/Card";
-import { ErrorState } from "@/components/ErrorState";
-import { PageHeader } from "@/components/PageHeader";
-import { getErrorMessage } from "@/lib/utils";
-import { listRoles, listUsers } from "@/features/admin/services/adminService";
+"use client";
 
-export async function AdminRolesPage() {
-  let roles;
-  let users;
-  try {
-    [roles, users] = await Promise.all([listRoles(), listUsers()]);
-  } catch (error) {
+import { useState } from "react";
+import Link from "next/link";
+import { Eye } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
+import { Card } from "@/components/Card";
+import { PageHeader } from "@/components/PageHeader";
+import { SearchInput } from "@/components/SearchInput";
+import { Table } from "@/components/Table";
+import type { Column } from "@/components/Table";
+import type { RoleRead, IamUserRead } from "@/features/admin/types";
+import { CreateRoleModal } from "@/features/admin/components/CreateRoleModal";
+import { EditRoleModal } from "@/features/admin/components/EditRoleModal";
+import { DeleteRoleButton } from "@/features/admin/components/DeleteRoleButton";
+
+interface Props {
+  initialRoles: RoleRead[];
+  initialUsers: IamUserRead[];
+}
+
+const SYSTEM_ROLES = new Set(["platform_admin", "tenant_admin"]);
+
+export function AdminRolesPageClient({ initialRoles, initialUsers }: Props) {
+  const [search, setSearch] = useState("");
+
+  const filtered = initialRoles.filter((r) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
     return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Roles"
-          description="Manage user roles and permissions"
-        />
-        <ErrorState message={getErrorMessage(error)} />
-      </div>
+      r.name.toLowerCase().includes(q) ||
+      r.slug.toLowerCase().includes(q)
     );
-  }
+  });
+
+  const columns: Column<RoleRead>[] = [
+    {
+      key: "name",
+      header: "Name",
+      render: (r) => (
+        <Link
+          href={`/admin/roles/${r.id}`}
+          className="font-medium hover:underline"
+          style={{ color: "var(--green-900)" }}
+        >
+          {r.name}
+        </Link>
+      ),
+    },
+    { key: "slug", header: "Slug", render: (r) => r.slug },
+    {
+      key: "users",
+      header: "Users",
+      className: "text-right",
+      render: (r) => {
+        const count = initialUsers.filter((u) =>
+          u.roles.some((ur) => ur.slug === r.slug),
+        ).length;
+        return (
+          <span
+            className="rounded-full px-2 py-0.5 text-xs font-medium"
+            style={{ background: "var(--green-050)", color: "var(--green-900)" }}
+          >
+            {count}
+          </span>
+        );
+      },
+    },
+    {
+      key: "type",
+      header: "Type",
+      render: (r) =>
+        SYSTEM_ROLES.has(r.slug) ? (
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--ink-mute)" }}
+          >
+            System
+          </span>
+        ) : (
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--green-900)" }}
+          >
+            Custom
+          </span>
+        ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (r) => {
+        const isSystem = SYSTEM_ROLES.has(r.slug);
+        return (
+          <div className="inline-flex items-center gap-0.5">
+            <Link href={`/admin/roles/${r.id}`}>
+              <ActionButton
+                icon={<Eye className="h-4 w-4" style={{ color: "var(--ink-soft)" }} />}
+                label="View role"
+                onClick={() => {}}
+              />
+            </Link>
+            <EditRoleModal role={r} />
+            <DeleteRoleButton
+              roleId={r.id}
+              roleName={r.name}
+              disabled={isSystem}
+              disabledReason={isSystem ? "System role cannot be deleted" : undefined}
+            />
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Roles"
-        description="System roles and their assigned users"
+        description="Manage user roles and permissions"
+        actions={<CreateRoleModal />}
       />
 
-      <div className="space-y-4">
-        {roles.map((role) => {
-          const assignedUsers = users.filter((u) =>
-            u.roles.some((r) => r.slug === role.slug),
-          );
-
-          return (
-            <Card key={role.id}>
-              <div className="mb-3 flex items-center justify-between">
-                <h3
-                  className="text-base font-semibold"
-                  style={{ color: "var(--ink)" }}
-                >
-                  {role.name}
-                </h3>
-                <span
-                  className="rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{
-                    background: "var(--green-050)",
-                    color: "var(--green-900)",
-                  }}
-                >
-                  {assignedUsers.length} user{assignedUsers.length !== 1 ? "s" : ""}
-                </span>
-              </div>
-
-              {assignedUsers.length === 0 ? (
-                <p
-                  className="text-sm italic"
-                  style={{ color: "var(--ink-mute)" }}
-                >
-                  No users assigned to this role
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {assignedUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2"
-                      style={{
-                        background: "var(--bg-alt)",
-                        border: "1px solid var(--border-soft)",
-                      }}
-                    >
-                      <div
-                        className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-ink-on-brand"
-                        style={{ background: "var(--green-900)" }}
-                      >
-                        {(user.username ?? user.email)
-                          .split(/\s+/)
-                          .slice(0, 2)
-                          .map((p) => p[0])
-                          .join("")
-                          .toUpperCase()}
-                      </div>
-                      <span
-                        className="text-sm font-medium"
-                        style={{ color: "var(--ink)" }}
-                      >
-                        {user.username || user.email}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          );
-        })}
-      </div>
+      <Card flush>
+        <div
+          className="flex items-center gap-4 border-b px-4 py-3"
+          style={{ borderColor: "var(--border-soft)" }}
+        >
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Search roles..."
+            className="flex-1"
+          />
+        </div>
+        <Table
+          columns={columns}
+          rows={filtered}
+          rowKey={(r) => r.id}
+          emptyMessage={
+            search ? `No roles match "${search}".` : "No roles found."
+          }
+        />
+      </Card>
     </div>
   );
 }

@@ -24,6 +24,33 @@ export interface IamUserRead {
   has_global_warehouse_access: boolean;
 }
 
+export interface UserActivityEntry {
+  kind: "role_assigned" | "role_revoked" | "warehouse_assigned" | "warehouse_revoked";
+  target: string;
+  actor_label: string;
+  occurred_at: string;
+}
+
+export interface PermissionRead {
+  id: string;
+  description: string;
+  category: string;
+}
+
+export interface RoleDetailUser {
+  id: string;
+  email: string;
+  username: string | null;
+}
+
+export interface RoleDetailRead {
+  id: string;
+  slug: string;
+  name: string;
+  permissions: PermissionRead[];
+  users: RoleDetailUser[];
+}
+
 /** Tenant administration dashboard — mirrors app/schemas/dashboard.py. */
 export interface TenantActivityEntry {
   kind: "role" | "warehouse";
