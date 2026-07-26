@@ -56,7 +56,7 @@ def _seed_tenant(db_session) -> Tenant:
     """Create the default tenant."""
     tenant = Tenant(
         name="default",
-        superuser_email="admin@test.local",
+        admin_email="admin@test.local",
     )
     db_session.add(tenant)
     db_session.flush()
@@ -99,6 +99,8 @@ def _seed_permissions_and_roles(db_session, tenant_id) -> dict[str, Role]:
         UserRole(user_id=NAIROBI_MANAGER_USER, role_id=roles["warehouse_manager"].id, tenant_id=tenant_id),
         UserRole(user_id=AUDITOR_USER, role_id=roles["auditor"].id, tenant_id=tenant_id),
     ])
+
+    return roles
 
 
 @pytest.fixture()

@@ -44,7 +44,7 @@ def _headers(user_id: str, username: str) -> dict[str, str]:
 def _seed_harden_perms(db_session) -> dict[str, Role]:
     """Seed permission catalog and roles for hardening tests."""
     # Seed tenant + users.
-    tenant = Tenant(name="default", superuser_email="admin@test.local")
+    tenant = Tenant(name="default", admin_email="admin@test.local")
     db_session.add(tenant)
     db_session.flush()
     for sub in [ADMIN_USER, AUDITOR_USER, NOCREDS_USER]:
@@ -336,7 +336,9 @@ class TestPermissionResolutionEdgeCases:
 
     def test_admin_has_all_permissions(self, db_session, seed_harden):
         perms = resolve_permissions(db_session, ADMIN_USER, seed_harden["tenant"].id)
-        assert len(perms) >= len(ALL_PERMISSIONS) - 5  # admin excludes IAM + platform perms
+        # admin excludes IAM, tenant-dashboard and platform perms — assert
+        # against the definition so adding a permission cannot silently pass.
+        assert perms == ROLE_DEFINITIONS["admin"]
 
     def test_unknown_user_has_no_permissions(self, db_session, seed_harden):
         assert resolve_permissions(db_session, "nonexistent-sub", seed_harden["tenant"].id) == set()

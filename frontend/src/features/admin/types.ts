@@ -23,3 +23,18 @@ export interface IamUserRead {
    * of the (possibly empty) warehouse assignment list. */
   has_global_warehouse_access: boolean;
 }
+
+/** Tenant administration dashboard — mirrors app/schemas/dashboard.py. */
+export interface TenantActivityEntry {
+  kind: "role" | "warehouse";
+  user_label: string;
+  target: string;
+  occurred_at: string;
+}
+
+export interface TenantDashboardSummary {
+  user_count: number;
+  role_count: number;
+  warehouse_count: number;
+  recent_activity: TenantActivityEntry[];
+}

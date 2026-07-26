@@ -101,8 +101,14 @@ class TestPermissionCatalogForm:
             )
 
     def test_all_permissions_has_no_duplicates(self):
-        """ALL_PERMISSIONS should contain exactly 21 permissions (19 + dashboard.platform + platform.tenant.manage)."""
-        assert len(ALL_PERMISSIONS) == 21, f"Expected 21 permissions, got {len(ALL_PERMISSIONS)}"
+        """ALL_PERMISSIONS should contain exactly 22 permissions.
+
+        19 operational + dashboard.platform + dashboard.tenant +
+        platform.tenant.manage.  Deliberate tripwire: adding a permission
+        should be a conscious act, and a drop in this count means a module's
+        PERMISSIONS dict silently lost an entry.
+        """
+        assert len(ALL_PERMISSIONS) == 22, f"Expected 22 permissions, got {len(ALL_PERMISSIONS)}"
 
     def test_role_definitions_has_5_roles(self):
         assert len(ROLE_DEFINITIONS) == 6, f"Expected 6 roles, got {len(ROLE_DEFINITIONS)}"

@@ -1,36 +1,20 @@
 /**
- * /dashboard — role-dispatch entry point.
+ * /dashboard — permission-dispatch entry point.
  *
- * Reads the current user's roles and redirects:
- *   platform_admin  → /platform   (platform dashboard)
- *   anything else   → stays here  (operational dashboard)
+ * The backend resolves which dashboard the caller gets from their `dashboard.*`
+ * permissions and returns it as `me.dashboard`; this page redirects there.
+ * "operations" is this page itself, so that case falls through and renders.
  *
  * The redirect happens server-side before any content is sent to the browser,
  * so there is no flash of wrong content.
  */
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { apiFetch } from "@/lib/api";
+import { DASHBOARD_ROUTES, getMe } from "@/lib/dashboards";
 import { DashboardPage } from "@/features/dashboard/components/DashboardPage";
-import type { IamUserRead } from "@/features/admin/types";
+import { NoDashboardState } from "@/components/NoDashboardState";
 
 export const dynamic = "force-dynamic";
-
-async function resolveRole(
-  sub: string,
-  token: string,
-): Promise<"platform_admin" | "tenant"> {
-  try {
-    const user = await apiFetch<IamUserRead>(`/iam/users/${sub}`, { token });
-    if (user.roles.some((r) => r.slug === "platform_admin")) {
-      return "platform_admin";
-    }
-  } catch {
-    // Any error (403 if they're a platform admin without an IAM tenant,
-    // 404, network) — fall through to operational dashboard.
-  }
-  return "tenant";
-}
 
 export default async function Page({
   searchParams,
@@ -40,9 +24,14 @@ export default async function Page({
   const session = await getSession();
   if (!session) redirect("/signin");
 
-  const role = await resolveRole(session.user.sub, session.accessToken);
-  if (role === "platform_admin") {
-    redirect("/platform");
+  const me = await getMe(session.accessToken);
+
+  // No dashboard permission at all — say so, rather than rendering a page whose
+  // every request will 403.
+  if (!me?.dashboard) return <NoDashboardState />;
+
+  if (me.dashboard !== "operations") {
+    redirect(DASHBOARD_ROUTES[me.dashboard]);
   }
 
   const { warehouse_id } = await searchParams;

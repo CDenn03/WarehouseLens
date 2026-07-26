@@ -91,7 +91,7 @@ def seed_auth(db_session):
     warehouse, supplier, and a product so the procurement/inventory endpoints
     have valid FK targets."""
     # ── Tenant ─────────────────────────────────────────────────────────
-    tenant = Tenant(name="default", superuser_email="admin@test.local")
+    tenant = Tenant(name="default", admin_email="admin@test.local")
     db_session.add(tenant)
     db_session.flush()
 
@@ -405,9 +405,10 @@ class TestPermissionResolution:
 
     def test_admin_has_all_permissions(self, db_session, seed_auth):
         perms = resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)
-        # admin excludes: iam.role.manage, iam.user_role.assign, iam.user.read,
-        # dashboard.platform, platform.tenant.manage  (5 total)
-        assert len(perms) >= len(ALL_PERMISSIONS) - 5
+        # Compare against the role definition rather than a count offset: the
+        # invariant is "what the DB grants matches what the catalog declares",
+        # which stays true when a permission is added.
+        assert perms == ROLE_DEFINITIONS["admin"]
 
     def test_warehouse_global_for_admin(self, db_session, seed_auth):
         assert WAREHOUSE_GLOBAL in resolve_permissions(db_session, ADMIN_USER, seed_auth["tenant"].id)

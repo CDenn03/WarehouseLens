@@ -4,17 +4,39 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions.dashboard import DASHBOARD_READ
+from app.core.permissions.dashboard import DASHBOARD_READ, DASHBOARD_TENANT
 from app.core.security import (
     CurrentUser,
     enforce_warehouse_scope,
     require_permission,
     scope_filter_warehouse_ids,
 )
-from app.schemas.dashboard import AbcRankingEntry, DashboardKpis, StockTrendPoint
+from app.core.exceptions import ForbiddenError
+from app.schemas.dashboard import (
+    AbcRankingEntry,
+    DashboardKpis,
+    StockTrendPoint,
+    TenantDashboardSummary,
+)
 from app.services import dashboard_service
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+@router.get("/tenant", response_model=TenantDashboardSummary)
+def tenant_summary(
+    db: Session = Depends(get_db),
+    user: CurrentUser = Depends(require_permission(DASHBOARD_TENANT)),
+):
+    """Administrative overview of the caller's own tenant.
+
+    Scoped to user.tenant_id, never a caller-supplied id: a tenant admin holds
+    this permission inside their own tenant only, so there is no legitimate way
+    to ask for another tenant's summary.
+    """
+    if user.tenant_id is None:
+        raise ForbiddenError("No tenant resolved for this user")
+    return dashboard_service.tenant_summary(db, user.tenant_id)
 
 
 @router.get("/kpis", response_model=DashboardKpis)

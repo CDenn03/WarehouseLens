@@ -11,9 +11,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.permissions.dashboard import resolve_dashboard
 from app.core.security import CurrentUser, get_current_user
 from app.models.authorization import Role, UserRole
 from app.schemas.auth import MeResponse, RoleSummary
+from app.services import permission_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -23,8 +25,9 @@ def get_me(
     user: CurrentUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Return the current user's identity and tenant-scoped roles."""
+    """Return the current user's identity, tenant-scoped roles and permissions."""
     roles = []
+    permissions: set[str] = set()
     if user.tenant_id is not None:
         role_rows = db.execute(
             select(Role)
@@ -35,6 +38,9 @@ def get_me(
             )
         ).scalars().all()
         roles = [RoleSummary(slug=r.slug, name=r.name) for r in role_rows]
+        permissions = permission_service.resolve_permissions(
+            db, user.sub, user.tenant_id
+        )
 
     return MeResponse(
         sub=user.sub,
@@ -42,4 +48,6 @@ def get_me(
         email=None,
         tenant_id=user.tenant_id,
         roles=roles,
+        permissions=sorted(permissions),
+        dashboard=resolve_dashboard(permissions),
     )

@@ -70,7 +70,7 @@ backend/
 │           ├── __init__.py          # Aggregator: ALL_PERMISSIONS, PERMISSION_CATEGORY
 │           ├── roles.py             # ROLE_DEFINITIONS, ROLE_NAMES
 │           ├── agent.py             # AGENT_INVOKE
-│           ├── dashboard.py         # DASHBOARD_READ
+│           ├── dashboard.py         # DASHBOARD_READ, DASHBOARD_TENANT, DASHBOARD_PLATFORM
 │           ├── forecast.py          # FORECAST_READ
 │           ├── iam.py               # IAM_ROLE_MANAGE, IAM_USER_ROLE_ASSIGN
 │           ├── inventory.py         # INVENTORY_READ, INVENTORY_WRITE, INVENTORY_PRODUCT_CREATE
@@ -85,7 +85,7 @@ backend/
 
 ---
 
-## Permission Catalog (18 permissions)
+## Permission Catalog (22 permissions)
 
 ### Domain: agent
 
@@ -97,7 +97,27 @@ backend/
 
 | Constant | Permission ID | Description |
 |----------|---------------|-------------|
-| `DASHBOARD_READ` | `dashboard.read` | View dashboard |
+| `DASHBOARD_READ` | `dashboard.read` | View operational dashboard |
+| `DASHBOARD_TENANT` | `dashboard.tenant` | View tenant administration dashboard |
+| `DASHBOARD_PLATFORM` | `dashboard.platform` | View platform administration dashboard |
+
+This namespace doubles as the **dashboard routing table**. Holding a
+`dashboard.*` permission is what grants a landing page, and `resolve_dashboard()`
+picks the highest-precedence one the caller holds:
+
+| Precedence | Permission | Kind | Route |
+|-----------|------------|------|-------|
+| 1 | `dashboard.platform` | `platform` | `/platform` |
+| 2 | `dashboard.tenant` | `tenant` | `/admin` |
+| 3 | `dashboard.read` | `operations` | `/dashboard` |
+
+Precedence matters because a user may hold more than one; "broadest scope wins"
+keeps the landing page deterministic instead of dependent on role-assignment
+order. Holding none resolves to `None` — the user sees an explicit "no dashboard
+assigned" state rather than a page that 403s on every request.
+
+`GET /api/v1/auth/me` returns the resolved kind as `dashboard`, so the frontend
+never re-implements this rule.
 
 ### Domain: forecast
 
@@ -147,11 +167,16 @@ backend/
 
 ---
 
-## Role Definitions (5 roles)
+## Role Definitions (6 roles)
 
 ### admin
 
-All permissions **except** `iam.role.manage` and `iam.user_role.assign` (IAM is managed by `iam_admin`).
+All permissions **except** the IAM set (`iam.role.manage`, `iam.user_role.assign`,
+`iam.user.read`), `dashboard.tenant` and `platform.tenant.manage`.
+
+`dashboard.tenant` is excluded deliberately: it outranks `dashboard.read`, so
+granting it would land an operational admin on the tenant administration
+dashboard, whose IAM data they have no permission to read.
 
 ### warehouse_manager
 
@@ -171,9 +196,22 @@ All permissions **except** `iam.role.manage` and `iam.user_role.assign` (IAM is 
 - `inventory.read`, `dashboard.read`, `forecast.read`
 - `warehouse.global` (read-only access across all warehouses)
 
-### iam_admin
+### tenant_admin
 
-- `iam.role.manage`, `iam.user_role.assign`
+- `dashboard.tenant` (lands on `/admin`)
+- `iam.role.manage`, `iam.user_role.assign`, `iam.user.read`
+- `warehouse.create`, `warehouse.assign_user`
+
+Deliberately holds **no** `dashboard.read`: it carries no inventory permissions,
+so the operational dashboard would 403 on every query. Replaces the former
+`iam_admin` role.
+
+### platform_admin
+
+- `dashboard.platform` (lands on `/platform`)
+- `platform.tenant.manage`, `iam.user.read`
+
+Lives in the platform pseudo-tenant; cannot touch tenant operational data.
 
 ---
 
@@ -412,6 +450,7 @@ What it does:
 | `GET /api/v1/dashboard/kpis` | `dashboard.read` | dashboard |
 | `GET /api/v1/dashboard/charts/stock-trend` | `dashboard.read` | dashboard |
 | `GET /api/v1/dashboard/charts/abc-ranking` | `dashboard.read` | dashboard |
+| `GET /api/v1/dashboard/tenant` | `dashboard.tenant` | dashboard |
 | `GET /api/v1/forecast/{id}` | `forecast.read` | forecast |
 | `POST /api/v1/agent/query` | `agent.invoke` | agent |
 | `GET /api/v1/products` | `inventory.read` | inventory |

@@ -9,7 +9,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import func, literal, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -17,10 +17,25 @@ from app.models import (
     InventoryTransaction,
     OutboundRequest,
     Product,
+    Role,
+    User,
+    UserRole,
+    UserTenant,
+    UserWarehouseAssignment,
+    Warehouse,
     WarehouseStock,
 )
 from app.models.outbound import OutboundStatus
-from app.schemas.dashboard import AbcRankingEntry, DashboardKpis, StockTrendPoint
+from app.schemas.dashboard import (
+    AbcRankingEntry,
+    DashboardKpis,
+    StockTrendPoint,
+    TenantActivityEntry,
+    TenantDashboardSummary,
+)
+
+# How many assignments the tenant dashboard's activity feed shows.
+_ACTIVITY_LIMIT = 8
 
 
 def _stock_filter(stmt, warehouse_id: UUID | None, visible: set[UUID] | None):
@@ -150,3 +165,80 @@ def abc_ranking(
             )
         )
     return entries
+
+
+def tenant_summary(db: Session, tenant_id: UUID) -> TenantDashboardSummary:
+    """Administrative overview of one tenant: who is in it, what they hold.
+
+    Everything here is scoped by tenant_id.  Warehouse assignments carry no
+    tenant column of their own, so they are scoped through the warehouse they
+    point at — the same join the warehouse scoping helpers use.
+    """
+    user_count = db.execute(
+        select(func.count())
+        .select_from(UserTenant)
+        .join(User, User.id == UserTenant.user_id)
+        .where(UserTenant.tenant_id == tenant_id, User.deleted_at.is_(None))
+    ).scalar_one()
+
+    role_count = db.execute(
+        select(func.count(func.distinct(UserRole.role_id)))
+        .where(UserRole.tenant_id == tenant_id)
+    ).scalar_one()
+
+    warehouse_count = db.execute(
+        select(func.count()).select_from(Warehouse).where(Warehouse.tenant_id == tenant_id)
+    ).scalar_one()
+
+    user_label = func.coalesce(User.email, User.username, User.id)
+
+    role_events = db.execute(
+        select(
+            literal("role").label("kind"),
+            user_label.label("user_label"),
+            Role.name.label("target"),
+            UserRole.assigned_at.label("occurred_at"),
+        )
+        .join(Role, Role.id == UserRole.role_id)
+        .join(User, User.id == UserRole.user_id)
+        .where(UserRole.tenant_id == tenant_id)
+        .order_by(UserRole.assigned_at.desc())
+        .limit(_ACTIVITY_LIMIT)
+    ).all()
+
+    warehouse_events = db.execute(
+        select(
+            literal("warehouse").label("kind"),
+            user_label.label("user_label"),
+            Warehouse.name.label("target"),
+            UserWarehouseAssignment.assigned_at.label("occurred_at"),
+        )
+        .join(Warehouse, Warehouse.id == UserWarehouseAssignment.warehouse_id)
+        .join(User, User.id == UserWarehouseAssignment.user_id)
+        .where(Warehouse.tenant_id == tenant_id)
+        .order_by(UserWarehouseAssignment.assigned_at.desc())
+        .limit(_ACTIVITY_LIMIT)
+    ).all()
+
+    # Merge in Python rather than UNION: the two limited queries are each tiny,
+    # and this keeps the ordering readable without a subquery wrapper.
+    merged = sorted(
+        [*role_events, *warehouse_events],
+        key=lambda r: r.occurred_at,
+        reverse=True,
+    )[:_ACTIVITY_LIMIT]
+
+    return TenantDashboardSummary(
+        user_count=user_count,
+        role_count=role_count,
+        warehouse_count=warehouse_count,
+        recent_activity=[
+            TenantActivityEntry(
+                kind=r.kind,
+                user_label=r.user_label,
+                target=r.target,
+                occurred_at=r.occurred_at,
+            )
+            for r in merged
+        ],
+    )

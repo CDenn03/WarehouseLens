@@ -7,6 +7,7 @@ import {
   type NavItem,
 } from "@/components/layout/SidebarContent";
 import { MobileDrawer } from "@/components/MobileDrawer";
+import type { DashboardKind } from "@/lib/dashboards";
 
 const tenantNavItems: NavItem[] = [
   {
@@ -111,6 +112,30 @@ const platformNavItems: NavItem[] = [
       </svg>
     ),
   },
+];
+
+// Tenant administrators manage people and sites, not stock — so their nav is
+// the /admin section plus warehouses, not the operational modules they hold no
+// permission for.
+const tenantAdminNavItems: NavItem[] = [
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5h6v6.75h-6zM3.75 3.75h6V10.5h-6zM13.5 3.75h6.75v6h-6.75zM13.5 12.75h6.75v7.5H13.5z" />
+      </svg>
+    ),
+  },
+  {
+    href: "/admin/users",
+    label: "Users",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+      </svg>
+    ),
+  },
   {
     href: "/admin/roles",
     label: "Roles",
@@ -120,7 +145,23 @@ const platformNavItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    href: "/warehouses",
+    label: "Warehouses",
+    icon: (
+      <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 21h19.5M3.75 21V9.349m16.5 11.651V9.349M12 3L3.75 9.349m16.5 0L12 3m0 0v18M7.5 12h3m3 0h3" />
+      </svg>
+    ),
+  },
 ];
+
+/** Sidebar variant per dashboard kind — same key the backend routes on. */
+const NAV_BY_DASHBOARD: Record<DashboardKind, { items: NavItem[]; subtitle?: string }> = {
+  platform: { items: platformNavItems, subtitle: "Platform" },
+  tenant: { items: tenantAdminNavItems, subtitle: "Administration" },
+  operations: { items: tenantNavItems },
+};
 
 function initialsOf(name: string): string {
   return name
@@ -133,7 +174,8 @@ function initialsOf(name: string): string {
 
 export interface AppShellProps {
   appName: string;
-  isPlatformAdmin: boolean;
+  /** Which dashboard the caller was routed to; null when they hold none. */
+  dashboard: DashboardKind | null;
   userName?: string;
   userEmail?: string;
   headerContext: string;
@@ -142,15 +184,18 @@ export interface AppShellProps {
 
 export function AppShell({
   appName,
-  isPlatformAdmin,
+  dashboard,
   userName,
   userEmail,
   headerContext,
   children,
 }: AppShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const items = isPlatformAdmin ? platformNavItems : tenantNavItems;
-  const brandSubtitle = isPlatformAdmin ? "Platform" : undefined;
+  // A user with no dashboard permission gets no navigation — every link would
+  // lead somewhere they cannot read.
+  const { items, subtitle: brandSubtitle } = dashboard
+    ? NAV_BY_DASHBOARD[dashboard]
+    : { items: [], subtitle: undefined };
 
   return (
     <div className="app-shell flex min-h-screen">

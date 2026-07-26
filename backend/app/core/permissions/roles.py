@@ -6,7 +6,7 @@ fails at import time instead of silently granting/denying the wrong thing.
 
 from . import ALL_PERMISSIONS
 from .agent import AGENT_INVOKE
-from .dashboard import DASHBOARD_PLATFORM, DASHBOARD_READ
+from .dashboard import DASHBOARD_PLATFORM, DASHBOARD_READ, DASHBOARD_TENANT
 from .forecast import FORECAST_READ
 from .iam import IAM_ROLE_MANAGE, IAM_USER_READ, IAM_USER_ROLE_ASSIGN
 from .inventory import INVENTORY_PRODUCT_CREATE, INVENTORY_READ, INVENTORY_WRITE
@@ -26,9 +26,12 @@ from .warehouse import WAREHOUSE_ASSIGN_USER, WAREHOUSE_CREATE, WAREHOUSE_GLOBAL
 
 ROLE_DEFINITIONS: dict[str, set[str]] = {
     # Full operational admin — all permissions except IAM and platform.
+    # DASHBOARD_TENANT is excluded deliberately: it outranks DASHBOARD_READ, so
+    # granting it would land an operational admin on the tenant administration
+    # dashboard, whose data they have no IAM permission to read.
     "admin": set(ALL_PERMISSIONS) - {
         IAM_ROLE_MANAGE, IAM_USER_ROLE_ASSIGN, IAM_USER_READ,
-        DASHBOARD_PLATFORM, PLATFORM_TENANT_MANAGE,
+        DASHBOARD_TENANT, DASHBOARD_PLATFORM, PLATFORM_TENANT_MANAGE,
     },
 
     # Warehouse Manager: inventory + outbound + dashboard + forecast + agent.
@@ -64,6 +67,7 @@ ROLE_DEFINITIONS: dict[str, set[str]] = {
     # Tenant Admin: IAM + warehouse management within their tenant.
     # Replaces the former iam_admin role.
     "tenant_admin": {
+        DASHBOARD_TENANT,
         IAM_ROLE_MANAGE,
         IAM_USER_ROLE_ASSIGN,
         IAM_USER_READ,
