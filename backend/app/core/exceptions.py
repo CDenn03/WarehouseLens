@@ -26,3 +26,11 @@ class ForbiddenError(WarehouseLensError):
     """Role or warehouse-scope violations (Section 9)."""
 
     status_code = 403
+
+
+class UpstreamError(WarehouseLensError):
+    """A dependency the request needs (Keycloak) is unreachable, rejected the
+    call, or was never configured.  Distinct from a 500 because the WarehouseLens
+    request itself was well-formed — the identity provider is what failed."""
+
+    status_code = 502

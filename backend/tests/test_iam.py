@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 
 
 def _make_tenant(db, name="alpha") -> Tenant:
-    t = Tenant(name=name, superuser_email=f"{name}@test.local")
+    t = Tenant(name=name, admin_email=f"{name}@test.local")
     db.add(t)
     db.flush()
     return t

@@ -96,3 +96,12 @@ export interface ActionResult {
   ok: boolean;
   error?: string;
 }
+
+/**
+ * Result shape for server actions whose payload the caller needs — e.g. the
+ * one-time password returned when an account is provisioned. Discriminated on
+ * `ok` so `data` is only reachable on the success branch.
+ */
+export type ActionResultWith<T> =
+  | { ok: true; data: T }
+  | { ok: false; error: string };

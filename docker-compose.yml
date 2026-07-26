@@ -40,6 +40,14 @@ services:
       # from the running schema.  Set only here: the worker shares this image
       # and must not race the backend for the same DDL lock.
       - RUN_MIGRATIONS=1
+      # Admin API access, used to provision tenant/platform admin accounts.
+      # Matches the dev-only KEYCLOAK_ADMIN credentials on the keycloak service.
+      - KEYCLOAK_ADMIN_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=warehouselens
+      - KEYCLOAK_ADMIN_AUTH_REALM=master
+      - KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+      - KEYCLOAK_ADMIN_USERNAME=${KEYCLOAK_ADMIN_USERNAME:-admin}
+      - KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD:-admin}
     volumes:
       - ./backend:/srv
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

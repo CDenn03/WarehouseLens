@@ -167,8 +167,12 @@ def maybe_bootstrap_admin(
 ) -> UUID | None:
     """One-time-by-outcome per tenant: if ``user_roles`` has zero rows for the
     default tenant, ``email_verified`` is true, and ``user_email`` matches that
-    tenant's ``superuser_email`` (case-insensitive), assign the ``iam_admin``
+    tenant's ``admin_email`` (case-insensitive), assign the ``tenant_admin``
     role scoped to that tenant.
+
+    Only the migration-seeded ``default`` tenant relies on this.  Tenants created
+    through the platform API get their admin provisioned up front, so their first
+    login finds an existing membership and never reaches here.
 
     Returns the tenant_id on bootstrap, ``None`` otherwise.  Idempotent —
     must never fire again once any role row exists for the tenant.
@@ -192,7 +196,7 @@ def maybe_bootstrap_admin(
     # Check email match.
     if not email_verified or not user_email:
         return None
-    if user_email.lower() != (tenant.superuser_email or "").lower():
+    if user_email.lower() != (tenant.admin_email or "").lower():
         return None
 
     # Find the tenant_admin role.

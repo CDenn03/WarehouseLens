@@ -18,6 +18,25 @@ class Settings(BaseSettings):
     keycloak_internal_url: str = ""
     keycloak_client_id: str = "warehouselens-backend"
 
+    # ── Keycloak Admin API ────────────────────────────────────────────
+    # Used to provision tenant admins and platform admins as real Keycloak
+    # accounts.  Base URL (no /realms suffix) and realm are derived from the
+    # issuer URL when left blank.
+    keycloak_admin_url: str = ""
+    keycloak_realm: str = ""
+    # Realm the admin token is obtained from: "master" for the bootstrap admin
+    # account, or the app realm when using a service-account client.
+    keycloak_admin_auth_realm: str = "master"
+    keycloak_admin_client_id: str = "admin-cli"
+    keycloak_admin_client_secret: str = ""
+    keycloak_admin_username: str = ""
+    keycloak_admin_password: str = ""
+
+    # Password handed to every newly provisioned admin.  It is issued as a
+    # Keycloak *temporary* password, so the user is forced through the
+    # UPDATE_PASSWORD screen on their first login.
+    initial_admin_password: str = "Changeme1"
+
     llm_api_key: str = ""
     llm_model: str = "claude-sonnet-5"
 

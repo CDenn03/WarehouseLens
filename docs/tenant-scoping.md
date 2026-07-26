@@ -156,7 +156,7 @@ One-shot-per-tenant bootstrap for the first superuser. Gates on **three conditio
 
 1. `user_roles` has **zero rows** for the default tenant (bootstrap hasn't fired yet)
 2. The user's `email_verified` claim is `true`
-3. The user's email matches `tenants.superuser_email` (case-insensitive)
+3. The user's email matches `tenants.admin_email` (case-insensitive)
 
 If all conditions pass, the function:
 - Creates a `user_tenants` row (tenant membership)
@@ -309,7 +309,7 @@ def soft_delete_user(db: Session, user_sub: str) -> None:
 **Forward migration** (applied via `alembic upgrade head`):
 
 1. Creates `tenants`, `users`, `user_tenants` tables
-2. Seeds a default tenant with `name='default'` and `superuser_email` from `DEFAULT_TENANT_SUPERUSER_EMAIL` env var (defaults to `admin@warehouselens.local`)
+2. Seeds a default tenant with `name='default'` and `admin_email` from `DEFAULT_TENANT_SUPERUSER_EMAIL` env var (defaults to `admin@warehouselens.local`)
 3. Adds `tenant_id` to `user_roles` (nullable first → backfill → NOT NULL), reconstructs composite PK
 4. Adds `tenant_id` to `warehouses` (nullable first → backfill → NOT NULL)
 5. Adds `created_by` to 7 state-changing tables
@@ -332,11 +332,11 @@ def soft_delete_user(db: Session, user_sub: str) -> None:
 
 ### Multi-Tenant Later
 
-To add a second tenant:
+In practice, use the platform API — `POST /api/v1/platform/tenants` does steps 1–4 in one request and provisions the tenant admin's Keycloak account (see [platform-admin.md](platform-admin.md)). The SQL below is the manual equivalent, useful for seeding and recovery.
 
 1. Insert a new row into `tenants`:
    ```sql
-   INSERT INTO tenants (id, name, superuser_email) VALUES (gen_random_uuid(), 'acme', 'admin@acme.com');
+   INSERT INTO tenants (id, name, admin_email) VALUES (gen_random_uuid(), 'acme', 'admin@acme.com');
    ```
 
 2. Create warehouses scoped to that tenant:
@@ -365,7 +365,7 @@ No code changes required. The schema and enforcement logic handle it automatical
 
 ## Bootstrap Flow — Detailed Walkthrough
 
-The bootstrap is a one-shot operation that fires on the **first login** of a user whose email matches the tenant's `superuser_email`:
+The bootstrap is a one-shot operation that fires on the **first login** of a user whose email matches the tenant's `admin_email`. It now only matters for the migration-seeded `default` tenant: tenants created through the platform API have their admin provisioned up front, so that user already has a membership and never reaches this path.
 
 ```
 First superuser logs in
@@ -380,7 +380,7 @@ First superuser logs in
   │   │
   │   ├── email_verified? → YES
   │   │
-  │   ├── email == superuser_email? → YES
+  │   ├── email == admin_email? → YES
   │   │
   │   ├── Find iam_admin role → exists (seeded by migration 0004)
   │   │
@@ -431,7 +431,7 @@ _GLOBAL_PERMISSIONS = {"warehouse.global"}
 
 ### 4. Bootstrap Only Fires Once
 
-If the first user's email doesn't match `superuser_email`, bootstrap won't fire for them. You'll need to manually assign roles via the IAM API or database.
+If the first user's email doesn't match `admin_email`, bootstrap won't fire for them. You'll need to manually assign roles via the IAM API or database.
 
 ### 5. Soft Delete Doesn't Touch Keycloak
 

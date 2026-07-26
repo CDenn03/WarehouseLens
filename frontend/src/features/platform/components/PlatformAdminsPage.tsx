@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { getErrorMessage } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 import { listPlatformAdmins } from "@/features/platform/services/platformService";
+import { PlatformAdminFormModal } from "@/features/platform/components/PlatformAdminFormModal";
 import { PlatformAdminsList } from "@/features/platform/components/PlatformAdminsList";
 
 export async function PlatformAdminsPage() {
@@ -31,6 +32,7 @@ export async function PlatformAdminsPage() {
       <PageHeader
         title="Platform Admins"
         description="Users with platform-wide administrative access"
+        actions={<PlatformAdminFormModal />}
       />
 
       <Card title="Platform administrators" description="Users with the platform_admin role">

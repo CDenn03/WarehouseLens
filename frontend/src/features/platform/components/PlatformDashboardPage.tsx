@@ -1,16 +1,17 @@
 import { Card } from "@/components/Card";
 import { ErrorState } from "@/components/ErrorState";
 import { PageHeader } from "@/components/PageHeader";
-import { Badge } from "@/components/Badge";
-import { formatDateTime, formatNumber, getErrorMessage } from "@/lib/utils";
+import { formatNumber, getErrorMessage } from "@/lib/utils";
 import { getSession } from "@/lib/auth";
 import {
   listPlatformAdmins,
   listTenants,
 } from "@/features/platform/services/platformService";
 import type { PlatformAdminRead, TenantRead } from "@/features/platform/types";
-import { CreateTenantModal } from "@/features/platform/components/CreateTenantModal";
+import { PlatformAdminFormModal } from "@/features/platform/components/PlatformAdminFormModal";
 import { PlatformAdminsList } from "@/features/platform/components/PlatformAdminsList";
+import { TenantFormModal } from "@/features/platform/components/TenantFormModal";
+import { TenantsTable } from "@/features/platform/components/TenantsTable";
 
 export async function PlatformDashboardPage() {
   let tenants: TenantRead[];
@@ -37,7 +38,7 @@ export async function PlatformDashboardPage() {
       <PageHeader
         title="Platform"
         description="Manage tenants and platform administrators"
-        actions={<CreateTenantModal />}
+        actions={<TenantFormModal />}
       />
 
       {/* ── Summary KPIs ── */}
@@ -130,57 +131,7 @@ export async function PlatformDashboardPage() {
         {/* Tenants table — 2/3 width */}
         <div className="xl:col-span-2">
           <Card title="Tenants" description="All provisioned tenants" flush>
-            {tenants.length === 0 ? (
-              <p
-                className="px-5 py-8 text-center text-sm"
-                style={{ color: "var(--ink-mute)" }}
-              >
-                No tenants yet. Create the first one above.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr
-                      className="border-b text-left text-xs font-semibold uppercase tracking-wide"
-                      style={{
-                        borderColor: "var(--border-soft)",
-                        color: "var(--ink-mute)",
-                      }}
-                    >
-                      <th className="px-5 py-3">Name</th>
-                      <th className="px-5 py-3">Superuser email</th>
-                      <th className="px-5 py-3 text-right">Users</th>
-                      <th className="px-5 py-3">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tenants.map((tenant) => (
-                      <tr
-                        key={tenant.id}
-                        className="border-b last:border-0 transition-colors hover:bg-[var(--bg-alt)]"
-                        style={{ borderColor: "var(--border-soft)" }}
-                      >
-                        <td className="px-5 py-3 font-medium" style={{ color: "var(--ink)" }}>
-                          {tenant.name}
-                        </td>
-                        <td className="px-5 py-3" style={{ color: "var(--ink-mute)" }}>
-                          {tenant.superuser_email ?? (
-                            <span className="italic">not set</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-right tabular-nums" style={{ color: "var(--ink)" }}>
-                          {formatNumber(tenant.user_count)}
-                        </td>
-                        <td className="px-5 py-3" style={{ color: "var(--ink-mute)" }}>
-                          {formatDateTime(tenant.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <TenantsTable tenants={tenants} />
           </Card>
         </div>
 
@@ -189,6 +140,7 @@ export async function PlatformDashboardPage() {
           <Card
             title="Platform admins"
             description="Users with platform_admin role"
+            actions={<PlatformAdminFormModal />}
           >
             <PlatformAdminsList admins={admins} currentUserId={currentUserId} />
           </Card>

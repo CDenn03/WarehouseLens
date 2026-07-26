@@ -21,7 +21,9 @@ class Tenant(Base, UuidPkMixin, CreatedAtMixin):
     __tablename__ = "tenants"
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
-    superuser_email: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # The tenant's first user: provisioned in Keycloak as a tenant_admin when
+    # the tenant is created, and the email the legacy login bootstrap matches on.
+    admin_email: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_platform: Mapped[bool] = mapped_column(default=False)
 
 
