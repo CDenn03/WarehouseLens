@@ -36,6 +36,10 @@ services:
     environment:
       - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/realms/warehouselens
       - KEYCLOAK_CLIENT_ID=warehouselens-backend
+      # Apply pending migrations on boot so a new revision can't silently drift
+      # from the running schema.  Set only here: the worker shares this image
+      # and must not race the backend for the same DDL lock.
+      - RUN_MIGRATIONS=1
     volumes:
       - ./backend:/srv
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
