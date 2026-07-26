@@ -11,10 +11,22 @@ import type {
   TenantWithAdminRead,
 } from "@/features/platform/types";
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 // ── Tenants ────────────────────────────────────────────────────────────────
 
-export function listTenants(): Promise<TenantRead[]> {
-  return apiFetch<TenantRead[]>("/platform/tenants");
+export function listTenants(
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<TenantRead>> {
+  return apiFetch<PaginatedResponse<TenantRead>>("/platform/tenants", {
+    query: params,
+  });
 }
 
 export function getTenant(tenantId: string): Promise<TenantRead> {
@@ -53,8 +65,12 @@ export function resetTenantAdminPassword(
 
 // ── Platform admins ────────────────────────────────────────────────────────
 
-export function listPlatformAdmins(): Promise<PlatformAdminRead[]> {
-  return apiFetch<PlatformAdminRead[]>("/platform/admins");
+export function listPlatformAdmins(
+  params?: Record<string, string | number>,
+): Promise<PaginatedResponse<PlatformAdminRead>> {
+  return apiFetch<PaginatedResponse<PlatformAdminRead>>("/platform/admins", {
+    query: params,
+  });
 }
 
 export function createPlatformAdmin(

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
 import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Modal } from "@/components/Modal";
@@ -90,14 +92,11 @@ export function PlatformAdminFormModal({ admin }: Props) {
   return (
     <>
       {isEdit ? (
-        <button
-          type="button"
+        <ActionButton
+          icon={<Pencil className="h-4 w-4" style={{ color: "var(--ink-soft)" }} />}
+          label="Edit"
           onClick={handleOpen}
-          className="text-xs font-medium transition-colors hover:underline"
-          style={{ color: "var(--ink-soft)" }}
-        >
-          Edit
-        </button>
+        />
       ) : (
         <Button size="sm" onClick={handleOpen}>
           + Add admin

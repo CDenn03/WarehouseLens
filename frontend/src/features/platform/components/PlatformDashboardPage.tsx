@@ -21,7 +21,12 @@ export async function PlatformDashboardPage() {
   try {
     const session = await getSession();
     currentUserId = session?.user.sub ?? "";
-    [tenants, admins] = await Promise.all([listTenants(), listPlatformAdmins()]);
+    const [tenantResult, adminResult] = await Promise.all([
+      listTenants(),
+      listPlatformAdmins(),
+    ]);
+    tenants = tenantResult.items;
+    admins = adminResult.items;
   } catch (error) {
     return (
       <div className="space-y-6">

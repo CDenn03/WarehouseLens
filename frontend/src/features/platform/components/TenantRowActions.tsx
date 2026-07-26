@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil, KeyRound, Trash2 } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
 import { Button } from "@/components/Button";
 import { Modal } from "@/components/Modal";
 import {
@@ -61,32 +63,22 @@ export function TenantRowActions({ tenant }: Props) {
   }
 
   return (
-    <div className="flex items-center justify-end gap-3">
+    <div className="flex items-center justify-end gap-1">
       <TenantFormModal tenant={tenant} />
 
-      <button
-        type="button"
+      <ActionButton
+        icon={<KeyRound className="h-4 w-4" style={{ color: "var(--ink-soft)" }} />}
+        label={tenant.admin_email ? "Reset password" : "No admin email"}
         onClick={() => open("reset")}
         disabled={!tenant.admin_email}
-        className="text-xs font-medium transition-colors hover:underline disabled:opacity-40 disabled:hover:no-underline"
-        style={{ color: "var(--ink-soft)" }}
-        title={
-          tenant.admin_email
-            ? "Issue a new temporary password for the tenant admin"
-            : "This tenant has no admin email"
-        }
-      >
-        Reset password
-      </button>
+      />
 
-      <button
-        type="button"
+      <ActionButton
+        icon={<Trash2 className="h-4 w-4" style={{ color: "var(--error)" }} />}
+        label="Delete"
         onClick={() => open("delete")}
-        className="text-xs font-medium transition-colors hover:underline"
-        style={{ color: "var(--error)" }}
-      >
-        Delete
-      </button>
+        variant="danger"
+      />
 
       <Modal
         open={dialog === "reset"}

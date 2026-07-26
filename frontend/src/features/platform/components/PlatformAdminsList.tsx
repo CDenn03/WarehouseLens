@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Pencil, KeyRound, UserMinus } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
 import { Button } from "@/components/Button";
 import { Modal } from "@/components/Modal";
 import { formatDateTime } from "@/lib/utils";
@@ -92,25 +94,20 @@ export function PlatformAdminsList({ admins, currentUserId }: Props) {
                     ` · assigned ${formatDateTime(admin.assigned_at)}`}
                 </p>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
+              <div className="flex shrink-0 items-center gap-1">
                 <PlatformAdminFormModal admin={admin} />
-                <button
-                  type="button"
+                <ActionButton
+                  icon={<KeyRound className="h-4 w-4" style={{ color: "var(--ink-soft)" }} />}
+                  label="Reset password"
                   onClick={() => open("reset", admin)}
-                  className="text-xs font-medium transition-colors hover:underline"
-                  style={{ color: "var(--ink-soft)" }}
-                >
-                  Reset password
-                </button>
+                />
                 {admin.id !== currentUserId && (
-                  <button
-                    type="button"
+                  <ActionButton
+                    icon={<UserMinus className="h-4 w-4" style={{ color: "var(--error)" }} />}
+                    label="Revoke"
                     onClick={() => open("revoke", admin)}
-                    className="text-xs font-medium transition-colors hover:underline"
-                    style={{ color: "var(--error)" }}
-                  >
-                    Revoke
-                  </button>
+                    variant="danger"
+                  />
                 )}
               </div>
             </li>
