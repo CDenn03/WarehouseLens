@@ -109,7 +109,7 @@ export function AdminUsersPageClient({
               onClick={() => {}}
             />
           </Link>
-          <EditUserModal user={u} />
+          <EditUserModal user={u} roles={roles} />
           <DeleteUserButton
             userId={u.id}
             username={u.username}
@@ -126,7 +126,7 @@ export function AdminUsersPageClient({
       <PageHeader
         title="Users"
         description="Manage user roles and warehouse assignments"
-        actions={<CreateUserModal />}
+        actions={<CreateUserModal roles={roles} />}
       />
 
       <Card flush>

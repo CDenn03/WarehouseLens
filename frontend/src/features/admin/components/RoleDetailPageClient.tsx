@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
+import { ActionButton } from "@/components/ActionButton";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/Card";
 import { Pagination } from "@/components/Pagination";
@@ -79,13 +80,9 @@ export function RoleDetailPageClient({ role }: Props) {
       key: "username",
       header: "User",
       render: (u) => (
-        <Link
-          href={`/admin/users/${u.id}`}
-          className="font-medium hover:underline"
-          style={{ color: "var(--green-900)" }}
-        >
+        <span className="font-medium" style={{ color: "var(--ink)" }}>
           {u.username || u.email}
-        </Link>
+        </span>
       ),
     },
     {
@@ -93,6 +90,20 @@ export function RoleDetailPageClient({ role }: Props) {
       header: "Email",
       render: (u) => (
         <span style={{ color: "var(--ink-soft)" }}>{u.email}</span>
+      ),
+    },
+    {
+      key: "actions",
+      header: "Actions",
+      className: "text-right",
+      render: (u) => (
+        <Link href={`/admin/users/${u.id}`}>
+          <ActionButton
+            icon={<Eye className="h-4 w-4" style={{ color: "var(--ink-soft)" }} />}
+            label="View user"
+            onClick={() => {}}
+          />
+        </Link>
       ),
     },
   ];

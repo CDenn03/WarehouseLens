@@ -28,20 +28,29 @@ export function getUser(userId: string): Promise<IamUserRead> {
 export function createUser(
   email: string,
   username?: string,
+  roleSlug?: string,
 ): Promise<IamUserRead> {
   return apiFetch<IamUserRead>("/iam/users", {
     method: "POST",
-    body: { email, ...(username ? { username } : {}) },
+    body: {
+      email,
+      ...(username ? { username } : {}),
+      ...(roleSlug ? { role_slug: roleSlug } : {}),
+    },
   });
 }
 
 export function updateUser(
   userId: string,
-  data: { email?: string; username?: string },
+  data: { email?: string; username?: string; roleSlug?: string },
 ): Promise<IamUserRead> {
   return apiFetch<IamUserRead>(`/iam/users/${userId}`, {
     method: "PATCH",
-    body: data,
+    body: {
+      ...(data.email !== undefined ? { email: data.email } : {}),
+      ...(data.username !== undefined ? { username: data.username } : {}),
+      ...(data.roleSlug !== undefined ? { role_slug: data.roleSlug } : {}),
+    },
   });
 }
 

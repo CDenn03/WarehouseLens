@@ -7,22 +7,28 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Modal } from "@/components/Modal";
 import { submitUpdateUser } from "@/features/admin/actions/adminActions";
-import type { IamUserRead } from "@/features/admin/types";
+import { RoleCombobox } from "@/features/admin/components/RoleCombobox";
+import type { IamUserRead, RoleRead } from "@/features/admin/types";
 
 interface Props {
   user: IamUserRead;
+  roles: RoleRead[];
 }
 
-export function EditUserModal({ user }: Props) {
+export function EditUserModal({ user, roles }: Props) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState(user.email);
   const [username, setUsername] = useState(user.username ?? "");
+  const [roleSlug, setRoleSlug] = useState<string | null>(
+    user.roles[0]?.slug ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleOpen() {
     setEmail(user.email);
     setUsername(user.username ?? "");
+    setRoleSlug(user.roles[0]?.slug ?? null);
     setError(null);
     setOpen(true);
   }
@@ -33,6 +39,7 @@ export function EditUserModal({ user }: Props) {
       const result = await submitUpdateUser(user.id, {
         email: email || undefined,
         username: username || undefined,
+        roleSlug: roleSlug || undefined,
       });
       if (!result.ok) {
         setError(result.error ?? "Unknown error");
@@ -65,6 +72,11 @@ export function EditUserModal({ user }: Props) {
             label="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+          />
+          <RoleCombobox
+            value={roleSlug}
+            onChange={setRoleSlug}
+            roles={roles}
           />
           {error && (
             <p

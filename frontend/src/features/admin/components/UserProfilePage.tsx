@@ -2,23 +2,38 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Warehouse, Activity } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import {
+  ArrowLeft,
+  Mail,
+  User as UserIcon,
+  ShieldCheck,
+  Warehouse,
+  Globe,
+  Activity,
+  Clock,
+} from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { Card } from "@/components/Card";
 import { formatDateTime } from "@/lib/utils";
 import { getUserActivity } from "@/features/admin/services/adminService";
-import type { IamUserRead, UserActivityEntry } from "@/features/admin/types";
+import type { IamUserRead, UserActivityEntry, RoleRead } from "@/features/admin/types";
 import type { Warehouse as WarehouseType } from "@/features/inventory/types";
-import { AssignRoleModal } from "@/features/admin/components/AssignRoleModal";
 import { AssignWarehouseModal } from "@/features/admin/components/AssignWarehouseModal";
-import { RevokeRoleButton } from "@/features/admin/components/RevokeRoleButton";
 import { RevokeWarehouseButton } from "@/features/admin/components/RevokeWarehouseButton";
+import { EditUserModal } from "@/features/admin/components/EditUserModal";
+import { DeleteUserButton } from "@/features/admin/components/DeleteUserButton";
 
 interface Props {
   user: IamUserRead;
-  roles: IamUserRead["roles"];
+  roles: RoleRead[];
   warehouses: WarehouseType[];
+}
+
+function initials(email: string, username: string | null): string {
+  const name = username || email;
+  const parts = name.replace(/@.*/, "").split(/[.\-_ ]+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
 }
 
 export function UserProfilePage({ user, roles, warehouses }: Props) {
@@ -33,73 +48,148 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
       .finally(() => setLoadingActivity(false));
   }, [user.id]);
 
+  const isDeleted = !!user.deleted_at;
+  const label = user.username || user.email;
+  const currentRole = user.roles[0] ?? null;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/admin/users"
-          className="rounded-lg p-1.5 transition-colors hover:bg-brand-50"
-          style={{ color: "var(--ink-soft)" }}
+      {/* Back link */}
+      <Link
+        href="/admin/users"
+        className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors hover:opacity-80"
+        style={{ color: "var(--green-900)" }}
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Back to users
+      </Link>
+
+      {/* ── Profile header ─────────────────────────────────────────── */}
+      <div
+        className="flex flex-col gap-5 rounded-xl sm:flex-row sm:items-center"
+        style={{
+          border: "1px solid var(--border-soft)",
+          boxShadow: "var(--shadow)",
+          background: "var(--surface-panel)",
+        }}
+      >
+        {/* Avatar */}
+        <div
+          className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full text-2xl font-bold sm:h-24 sm:w-24 sm:text-3xl"
+          style={{
+            background: isDeleted ? "var(--bg-alt)" : "var(--green-900)",
+            color: isDeleted ? "var(--ink-mute)" : "var(--ink-on-brand)",
+          }}
         >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <PageHeader
-          title={user.username || user.email}
-          description={user.email}
-          actions={
-            user.deleted_at ? (
+          {initials(user.email, user.username)}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 space-y-1 pb-4 sm:pb-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1
+              className="text-xl font-semibold"
+              style={{ color: "var(--ink)" }}
+            >
+              {label}
+            </h1>
+            {isDeleted ? (
               <Badge tone="red">
                 Deleted {formatDateTime(user.deleted_at)}
               </Badge>
-            ) : undefined
-          }
-        />
-      </div>
+            ) : (
+              <Badge tone="green">Active</Badge>
+            )}
+          </div>
 
-      {/* Roles */}
-      <Card
-        title="Roles"
-        actions={
-          !user.deleted_at ? (
-            <AssignRoleModal user={user} roles={roles} />
-          ) : undefined
-        }
-      >
-        {user.roles.length === 0 ? (
-          <p className="text-sm italic" style={{ color: "var(--ink-mute)" }}>
-            No roles assigned
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {user.roles.map((role) => (
-              <div
-                key={role.slug}
-                className="flex items-center gap-1.5 rounded-full pl-3 pr-1.5 py-1"
-                style={{
-                  background: "var(--green-050)",
-                  border: "1px solid var(--green-100)",
-                }}
-              >
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: "var(--green-900)" }}
-                >
-                  {role.name}
-                </span>
-                {!user.deleted_at && (
-                  <RevokeRoleButton userId={user.id} roleSlug={role.slug} />
-                )}
-              </div>
-            ))}
+          <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-soft)" }}>
+            <Mail className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--ink-mute)" }} />
+            {user.email}
+          </div>
+
+          {user.username && (
+            <div className="flex items-center gap-1.5 text-sm" style={{ color: "var(--ink-soft)" }}>
+              <UserIcon className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--ink-mute)" }} />
+              {user.username}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {!isDeleted && (
+          <div className="flex shrink-0 gap-2 px-5 pb-4 sm:px-0 sm:pr-5 sm:pb-0">
+            <EditUserModal user={user} roles={roles} />
+            <DeleteUserButton
+              userId={user.id}
+              username={user.username}
+              email={user.email}
+              isDeleted={isDeleted}
+            />
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Warehouses */}
+      {/* ── Stats strip ────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          {
+            icon: <ShieldCheck className="h-4 w-4" />,
+            label: "Role",
+            value: currentRole ? currentRole.name : "None",
+          },
+          {
+            icon: user.has_global_warehouse_access ? (
+              <Globe className="h-4 w-4" />
+            ) : (
+              <Warehouse className="h-4 w-4" />
+            ),
+            label: user.has_global_warehouse_access
+              ? "Global access"
+              : "Warehouses",
+            value: user.has_global_warehouse_access
+              ? "All"
+              : user.warehouse_assignments.length,
+          },
+          {
+            icon: <Activity className="h-4 w-4" />,
+            label: "Activity",
+            value: loadingActivity ? "..." : activity.length,
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="flex items-center gap-3 rounded-xl px-4 py-3"
+            style={{
+              border: "1px solid var(--border-soft)",
+              background: "var(--surface-panel)",
+            }}
+          >
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              style={{ background: "var(--green-050)", color: "var(--green-900)" }}
+            >
+              {stat.icon}
+            </div>
+            <div>
+              <p
+                className="text-lg font-semibold leading-tight"
+                style={{ color: "var(--ink)" }}
+              >
+                {stat.value}
+              </p>
+              <p className="text-xs" style={{ color: "var(--ink-mute)" }}>
+                {stat.label}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Warehouses ─────────────────────────────────────────────── */}
       <Card
         title="Warehouse Assignments"
         actions={
-          !user.deleted_at && !user.has_global_warehouse_access ? (
+          !isDeleted && !user.has_global_warehouse_access ? (
             <AssignWarehouseModal user={user} warehouses={warehouses} />
           ) : undefined
         }
@@ -112,19 +202,7 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
               color: "var(--ink-on-brand)",
             }}
           >
-            <svg
-              className="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"
-              />
-            </svg>
+            <Globe className="h-4 w-4" />
             Global warehouse access — bypasses assignment list
           </div>
         ) : user.warehouse_assignments.length === 0 ? (
@@ -156,7 +234,7 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
                     Assigned {formatDateTime(assignment.assigned_at)}
                   </p>
                 </div>
-                {!user.deleted_at && (
+                {!isDeleted && (
                   <RevokeWarehouseButton
                     userId={user.id}
                     warehouseId={assignment.warehouse_id}
@@ -168,12 +246,13 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
         )}
       </Card>
 
-      {/* Recent Activity */}
+      {/* ── Recent Activity ────────────────────────────────────────── */}
       <Card title="Recent Activity">
         {loadingActivity ? (
-          <p className="text-sm italic" style={{ color: "var(--ink-mute)" }}>
-            Loading...
-          </p>
+          <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-mute)" }}>
+            <Clock className="h-4 w-4 animate-spin" />
+            Loading activity...
+          </div>
         ) : activity.length === 0 ? (
           <p className="text-sm italic" style={{ color: "var(--ink-mute)" }}>
             No recent activity

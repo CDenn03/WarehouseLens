@@ -98,6 +98,7 @@ class UserCreate(BaseModel):
 
     email: str
     username: str | None = None
+    role_slug: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -110,10 +111,11 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """Partial update for user email/username."""
+    """Partial update for user email/username/role."""
 
     email: str | None = None
     username: str | None = None
+    role_slug: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -128,7 +130,7 @@ class UserUpdate(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> UserUpdate:
-        if self.email is None and self.username is None:
+        if self.email is None and self.username is None and self.role_slug is None:
             raise ValueError("provide at least one field to update")
         return self
 

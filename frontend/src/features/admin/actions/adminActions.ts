@@ -63,11 +63,13 @@ export async function submitDeleteRole(roleId: string): Promise<ActionResult> {
 export async function submitCreateUser(
   email: string,
   username?: string,
+  roleSlug?: string,
 ): Promise<ActionResult> {
   if (!email.trim()) return { ok: false, error: "Email is required." };
   try {
-    await svcCreateUser(email, username);
+    await svcCreateUser(email, username, roleSlug);
     revalidatePath("/admin/users");
+    revalidatePath("/admin/roles");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: getErrorMessage(error) };
@@ -76,12 +78,13 @@ export async function submitCreateUser(
 
 export async function submitUpdateUser(
   userId: string,
-  data: { email?: string; username?: string },
+  data: { email?: string; username?: string; roleSlug?: string },
 ): Promise<ActionResult> {
   try {
     await svcUpdateUser(userId, data);
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${userId}`);
+    revalidatePath("/admin/roles");
     return { ok: true };
   } catch (error) {
     return { ok: false, error: getErrorMessage(error) };

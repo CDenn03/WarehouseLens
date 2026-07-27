@@ -5,17 +5,25 @@ import { Button } from "@/components/Button";
 import { Input } from "@/components/Input";
 import { Modal } from "@/components/Modal";
 import { submitCreateUser } from "@/features/admin/actions/adminActions";
+import { RoleCombobox } from "@/features/admin/components/RoleCombobox";
+import type { RoleRead } from "@/features/admin/types";
 
-export function CreateUserModal() {
+interface Props {
+  roles: RoleRead[];
+}
+
+export function CreateUserModal({ roles }: Props) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
+  const [roleSlug, setRoleSlug] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleOpen() {
     setEmail("");
     setUsername("");
+    setRoleSlug(null);
     setError(null);
     setOpen(true);
   }
@@ -23,7 +31,11 @@ export function CreateUserModal() {
   function handleSubmit() {
     setError(null);
     startTransition(async () => {
-      const result = await submitCreateUser(email, username || undefined);
+      const result = await submitCreateUser(
+        email,
+        username || undefined,
+        roleSlug || undefined,
+      );
       if (!result.ok) {
         setError(result.error ?? "Unknown error");
         return;
@@ -39,7 +51,7 @@ export function CreateUserModal() {
         open={open}
         onClose={() => setOpen(false)}
         title="Create User"
-        description="Provisions a Keycloak account with a temporary password."
+        description="Create user with temporary password."
       >
         <div className="space-y-4">
           <Input
@@ -54,6 +66,12 @@ export function CreateUserModal() {
             placeholder="jdoe"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+          />
+          <RoleCombobox
+            value={roleSlug}
+            onChange={setRoleSlug}
+            roles={roles}
+            required
           />
           {error && (
             <p
@@ -77,7 +95,7 @@ export function CreateUserModal() {
             </Button>
             <Button
               onClick={handleSubmit}
-              disabled={!email.trim() || isPending}
+              disabled={!email.trim() || !roleSlug || isPending}
               isLoading={isPending}
             >
               Create

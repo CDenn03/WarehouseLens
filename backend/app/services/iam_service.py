@@ -390,7 +390,7 @@ def create_user(
 ) -> UserRead:
     """Create a new user by provisioning a Keycloak account.
 
-    The user is added to the actor's tenant.
+    The user is added to the actor's tenant. Optionally assigns a role.
     """
     tenant_id = actor.tenant_id
 
@@ -412,6 +412,20 @@ def create_user(
     if db.get(UserTenant, (user.id, tenant_id)) is None:
         db.add(UserTenant(user_id=user.id, tenant_id=tenant_id))
 
+    # Assign role if provided
+    if data.role_slug:
+        role = db.execute(
+            select(Role).where(Role.slug == data.role_slug)
+        ).scalar_one_or_none()
+        if role is None:
+            raise NotFoundError(f"role '{data.role_slug}' not found")
+        db.add(UserRole(
+            user_id=user.id,
+            role_id=role.id,
+            tenant_id=tenant_id,
+            assigned_by=actor.sub,
+        ))
+
     db.add(AccessDecision(
         user_id=actor.sub,
         permission_id=IAM_USER_ROLE_ASSIGN,
@@ -431,7 +445,7 @@ def update_user(
     target_user_id: str,
     data: UserUpdate,
 ) -> UserRead:
-    """Update a user's email/username in both Keycloak and the local mirror."""
+    """Update a user's email/username/role in both Keycloak and the local mirror."""
     tenant_id = actor.tenant_id
     user = _get_user_in_tenant(db, target_user_id, tenant_id)
 
@@ -451,6 +465,39 @@ def update_user(
         user.email = data.email
     if data.username is not None:
         user.username = data.username
+
+    # Swap role if role_slug provided
+    if data.role_slug is not None:
+        new_role = db.execute(
+            select(Role).where(Role.slug == data.role_slug)
+        ).scalar_one_or_none()
+        if new_role is None:
+            raise NotFoundError(f"role '{data.role_slug}' not found")
+
+        # Find current role assignment
+        current_assignment = db.execute(
+            select(UserRole).where(
+                UserRole.user_id == target_user_id,
+                UserRole.tenant_id == tenant_id,
+            )
+        ).scalar_one_or_none()
+
+        if current_assignment is not None:
+            if current_assignment.role_id != new_role.id:
+                db.delete(current_assignment)
+                db.add(UserRole(
+                    user_id=target_user_id,
+                    role_id=new_role.id,
+                    tenant_id=tenant_id,
+                    assigned_by=actor.sub,
+                ))
+        else:
+            db.add(UserRole(
+                user_id=target_user_id,
+                role_id=new_role.id,
+                tenant_id=tenant_id,
+                assigned_by=actor.sub,
+            ))
 
     db.add(AccessDecision(
         user_id=actor.sub,
