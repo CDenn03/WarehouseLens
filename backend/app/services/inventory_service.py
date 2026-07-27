@@ -52,10 +52,9 @@ def create_product(db: Session, data: ProductCreate) -> Product:
 
 
 def product_stock_breakdown(
-    db: Session, product_id: UUID, visible_warehouse_ids: set[UUID] | None
+    db: Session, product_id: UUID, visible_warehouse_ids: set[UUID]
 ) -> ProductStockBreakdown:
-    """Per-warehouse stock for one product, filtered to the caller's scope
-    (visible_warehouse_ids=None means global)."""
+    """Per-warehouse stock for one product, filtered to the caller's scope."""
     product = get_product(db, product_id)
     stmt = (
         select(WarehouseStock, Warehouse.name)
@@ -74,7 +73,7 @@ def product_stock_breakdown(
             below_reorder_point=ws.quantity_on_hand < ws.reorder_point,
         )
         for ws, name in rows
-        if visible_warehouse_ids is None or ws.warehouse_id in visible_warehouse_ids
+        if ws.warehouse_id in visible_warehouse_ids
     ]
     return ProductStockBreakdown(product=ProductRead.model_validate(product), stock=stock)
 
@@ -97,6 +96,8 @@ def apply_movement(
     quantity_delta: int,
     tx_type: str,
     reference_id: UUID | None = None,
+    reason: str | None = None,
+    created_by: str | None = None,
 ) -> InventoryTransaction:
     """The single choke point for stock movement: writes the transaction row
     (source of truth, Section 5) and keeps warehouse_stock.quantity_on_hand in
@@ -114,17 +115,28 @@ def apply_movement(
         quantity_delta=quantity_delta,
         type=tx_type,
         reference_id=reference_id,
+        reason=reason,
+        created_by=created_by,
     )
     db.add(tx)
     return tx
 
 
-def create_manual_transaction(db: Session, data: TransactionCreate) -> InventoryTransaction:
+def create_manual_transaction(
+    db: Session, data: TransactionCreate, created_by: str | None = None
+) -> InventoryTransaction:
     get_product(db, data.product_id)
     if db.get(Warehouse, data.warehouse_id) is None:
         raise NotFoundError(f"warehouse {data.warehouse_id} not found")
     tx = apply_movement(
-        db, data.warehouse_id, data.product_id, data.quantity_delta, data.type, data.reference_id
+        db,
+        data.warehouse_id,
+        data.product_id,
+        data.quantity_delta,
+        data.type,
+        data.reference_id,
+        reason=data.reason,
+        created_by=created_by,
     )
     db.commit()
     return tx
@@ -133,7 +145,7 @@ def create_manual_transaction(db: Session, data: TransactionCreate) -> Inventory
 def list_transactions(
     db: Session,
     params: PaginationParams,
-    visible_warehouse_ids: set[UUID] | None,
+    visible_warehouse_ids: set[UUID],
     warehouse_id: UUID | None = None,
     product_id: UUID | None = None,
     date_from: date | None = None,
@@ -142,7 +154,7 @@ def list_transactions(
     stmt = select(InventoryTransaction)
     if warehouse_id is not None:
         stmt = stmt.where(InventoryTransaction.warehouse_id == warehouse_id)
-    elif visible_warehouse_ids is not None:
+    else:
         stmt = stmt.where(InventoryTransaction.warehouse_id.in_(visible_warehouse_ids))
     if product_id is not None:
         stmt = stmt.where(InventoryTransaction.product_id == product_id)

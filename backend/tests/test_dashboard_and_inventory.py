@@ -34,6 +34,7 @@ def test_stock_trend_reflects_movement(client, seeded):
             "product_id": str(seeded["widget"].id),
             "quantity_delta": -10,
             "type": "adjustment",
+            "reason": "cycle count correction",
         },
     )
     trend = client.get(
@@ -53,6 +54,7 @@ def test_adjustment_cannot_go_negative(client, seeded):
             "product_id": str(seeded["widget"].id),
             "quantity_delta": -999,
             "type": "adjustment",
+            "reason": "damage write-off",
         },
     )
     assert response.status_code == 409

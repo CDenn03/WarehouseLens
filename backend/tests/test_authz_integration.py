@@ -130,6 +130,11 @@ def seed_auth(db_session):
     supplier = Supplier(name="Acme", lead_time_days=5, contact_email="a@acme.test")
     product = Product(sku="SKU-TEST", name="Test Widget", category="Parts", unit_cost=Decimal("10.00"))
     db_session.add_all([nairobi, supplier, product])
+    db_session.flush()
+
+    # procurement_officer is warehouse-scoped (no warehouse.global) — assign
+    # PROC_USER to nairobi so PO create/receive against it is allowed.
+    db_session.add(UserWarehouseAssignment(user_id=PROC_USER, warehouse_id=nairobi.id))
     db_session.commit()
 
     return {
@@ -314,6 +319,7 @@ class TestScenarioD_WarehouseScope:
                 "product_id": str(seed_auth["product"].id),
                 "quantity_delta": 5,
                 "type": "adjustment",
+                "reason": "test adjustment",
             },
             headers=_headers(user_id, "scoped.user"),
         )
@@ -340,6 +346,7 @@ class TestScenarioD_WarehouseScope:
                 "product_id": str(seed_auth["product"].id),
                 "quantity_delta": 5,
                 "type": "adjustment",
+                "reason": "test adjustment",
             },
             headers=_headers(user_id, "global.user"),
         )

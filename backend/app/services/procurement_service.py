@@ -38,14 +38,14 @@ def create_supplier(db: Session, data: SupplierCreate) -> Supplier:
 def list_purchase_orders(
     db: Session,
     params: PaginationParams,
-    visible_warehouse_ids: set[UUID] | None,
+    visible_warehouse_ids: set[UUID],
     warehouse_id: UUID | None = None,
     status: str | None = None,
 ) -> dict:
     stmt = select(PurchaseOrder)
     if warehouse_id is not None:
         stmt = stmt.where(PurchaseOrder.destination_warehouse_id == warehouse_id)
-    elif visible_warehouse_ids is not None:
+    else:
         stmt = stmt.where(PurchaseOrder.destination_warehouse_id.in_(visible_warehouse_ids))
     if status is not None:
         stmt = stmt.where(PurchaseOrder.status == status)

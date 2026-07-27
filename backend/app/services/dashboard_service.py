@@ -38,16 +38,14 @@ from app.schemas.dashboard import (
 _ACTIVITY_LIMIT = 8
 
 
-def _stock_filter(stmt, warehouse_id: UUID | None, visible: set[UUID] | None):
+def _stock_filter(stmt, warehouse_id: UUID | None, visible: set[UUID]):
     if warehouse_id is not None:
         return stmt.where(WarehouseStock.warehouse_id == warehouse_id)
-    if visible is not None:
-        return stmt.where(WarehouseStock.warehouse_id.in_(visible))
-    return stmt
+    return stmt.where(WarehouseStock.warehouse_id.in_(visible))
 
 
 def get_kpis(
-    db: Session, warehouse_id: UUID | None, visible: set[UUID] | None
+    db: Session, warehouse_id: UUID | None, visible: set[UUID]
 ) -> DashboardKpis:
     value_stmt = _stock_filter(
         select(func.coalesce(func.sum(WarehouseStock.quantity_on_hand * Product.unit_cost), 0))
@@ -71,7 +69,7 @@ def get_kpis(
     )
     if warehouse_id is not None:
         open_stmt = open_stmt.where(OutboundRequest.source_warehouse_id == warehouse_id)
-    elif visible is not None:
+    else:
         open_stmt = open_stmt.where(OutboundRequest.source_warehouse_id.in_(visible))
     open_requests = db.execute(open_stmt).scalar_one()
 
@@ -85,7 +83,7 @@ def get_kpis(
 def stock_trend(
     db: Session,
     warehouse_id: UUID | None,
-    visible: set[UUID] | None,
+    visible: set[UUID],
     days: int = 30,
 ) -> list[StockTrendPoint]:
     """Daily total on-hand for the trailing window, reconstructed by walking the
@@ -109,7 +107,7 @@ def stock_trend(
     )
     if warehouse_id is not None:
         delta_stmt = delta_stmt.where(InventoryTransaction.warehouse_id == warehouse_id)
-    elif visible is not None:
+    else:
         delta_stmt = delta_stmt.where(InventoryTransaction.warehouse_id.in_(visible))
     deltas = {
         (d if isinstance(d, date) else date.fromisoformat(str(d))): int(total)
@@ -127,7 +125,7 @@ def stock_trend(
 
 
 def abc_ranking(
-    db: Session, warehouse_id: UUID | None, visible: set[UUID] | None
+    db: Session, warehouse_id: UUID | None, visible: set[UUID]
 ) -> list[AbcRankingEntry]:
     """Products ranked by inventory value; A = top 80% of cumulative value,
     B = next 15%, C = the tail."""

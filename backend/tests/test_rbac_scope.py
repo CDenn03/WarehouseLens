@@ -40,6 +40,7 @@ def test_scoped_user_cannot_adjust_other_warehouse(client, seeded):
             "product_id": str(seeded["widget"].id),
             "quantity_delta": 5,
             "type": "adjustment",
+            "reason": "test adjustment",
         },
     )
     assert response.status_code == 403

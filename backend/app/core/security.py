@@ -597,10 +597,20 @@ def enforce_warehouse_scope(db: Session, user: CurrentUser, warehouse_id: UUID |
         raise ForbiddenError(f"not assigned to warehouse {warehouse_id}")
 
 
-def scope_filter_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID] | None:
-    """For list endpoints: None means 'no filter' (global); otherwise the set
-    of warehouse ids the caller may see (possibly empty)."""
+def scope_filter_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
+    """For list endpoints: the set of warehouse ids the caller may see.
+
+    Always concrete and always tenant-scoped, even for ``warehouse.global``
+    holders — "global" means "every warehouse in my tenant," never across
+    tenants (mirrors enforce_tenant_scope's guarantee). Returning `None` here
+    previously let callers skip filtering entirely, which leaked
+    cross-tenant rows wherever the resource table carries no tenant_id of its
+    own (warehouse_stock, purchase_orders, outbound_requests, ...).
+    """
     _ensure_permissions(db, user)
     if _GLOBAL_PERMISSIONS & user.permissions:
-        return None
+        rows = db.execute(
+            select(Warehouse.id).where(Warehouse.tenant_id == user.tenant_id)
+        ).scalars()
+        return set(rows)
     return assigned_warehouse_ids(db, user)

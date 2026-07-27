@@ -101,14 +101,14 @@ def create_internal_transfer(db: Session, data: OutboundRequestCreate) -> Outbou
 def list_outbound_requests(
     db: Session,
     params: PaginationParams,
-    visible_warehouse_ids: set[UUID] | None,
+    visible_warehouse_ids: set[UUID],
     warehouse_id: UUID | None = None,
     status: str | None = None,
 ) -> dict:
     stmt = select(OutboundRequest)
     if warehouse_id is not None:
         stmt = stmt.where(OutboundRequest.source_warehouse_id == warehouse_id)
-    elif visible_warehouse_ids is not None:
+    else:
         stmt = stmt.where(OutboundRequest.source_warehouse_id.in_(visible_warehouse_ids))
     if status is not None:
         stmt = stmt.where(OutboundRequest.status == status)
