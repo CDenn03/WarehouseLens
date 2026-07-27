@@ -95,4 +95,4 @@ def create_transaction(
     wh = get_warehouse(db, data.warehouse_id)
     enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, data.warehouse_id)
-    return inventory_service.create_manual_transaction(db, data)
+    return inventory_service.create_manual_transaction(db, data, created_by=user.sub)

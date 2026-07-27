@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Index, String
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, UuidPkMixin, utcnow
@@ -34,3 +34,7 @@ class InventoryTransaction(Base, UuidPkMixin):
     created_by: Mapped[str | None] = mapped_column(
         String(120), ForeignKey("users.id"), nullable=True
     )
+    # Free-text "why" for manual corrections (Section 4 of journeys.md) — the
+    # only audit trail an adjustment has, since receipts/shipments/transfers
+    # already point back at a PO/shipment via reference_id.
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)

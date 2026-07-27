@@ -3,8 +3,15 @@
 export interface Warehouse {
   id: string;
   name: string;
-  code?: string;
-  location?: string;
+  address: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface WarehouseUpdateInput {
+  name?: string;
+  address?: string;
+  is_active?: boolean;
 }
 
 export interface Product {
@@ -53,6 +60,8 @@ export interface InventoryTransaction {
   product_name?: string;
   quantity_delta: number;
   type: TransactionType | string;
+  reason?: string | null;
+  created_by?: string | null;
   occurred_at?: string;
 }
 
@@ -69,6 +78,7 @@ export interface ManualAdjustmentInput {
   product_id: string;
   quantity_delta: number;
   type: TransactionType;
+  reason?: string;
 }
 
 export interface ForecastPoint {

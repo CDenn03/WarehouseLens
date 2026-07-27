@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/Button";
-import { Input } from "@/components/Input";
+import { Input, Textarea } from "@/components/Input";
 import { Select } from "@/components/Select";
 import { submitManualAdjustment } from "@/features/inventory/actions/inventoryActions";
 import type { TransactionType, Warehouse } from "@/features/inventory/types";
@@ -23,6 +23,7 @@ export function AdjustmentForm({
   const [warehouseId, setWarehouseId] = useState("");
   const [type, setType] = useState<TransactionType>("adjustment");
   const [delta, setDelta] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -36,10 +37,12 @@ export function AdjustmentForm({
         product_id: productId,
         quantity_delta: Number(delta),
         type,
+        reason: reason.trim() || undefined,
       });
       if (result.ok) {
         setSuccess(true);
         setDelta("");
+        setReason("");
       } else {
         setError(result.error ?? "Could not record the adjustment.");
       }
@@ -80,6 +83,14 @@ export function AdjustmentForm({
       <p className="text-xs text-ink-mute">
         Positive numbers add stock, negative numbers remove it.
       </p>
+      <Textarea
+        label={type === "adjustment" ? "Reason (required)" : "Reason (optional)"}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="e.g. cycle count correction, damaged stock write-off"
+        rows={2}
+        required={type === "adjustment"}
+      />
       {error && <p className="text-sm text-error">{error}</p>}
       {success && (
         <p className="text-sm text-success">

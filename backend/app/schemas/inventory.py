@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.inventory import TransactionType
 from app.schemas.common import OrmModel
@@ -15,13 +15,22 @@ class TransactionCreate(BaseModel):
     quantity_delta: int
     type: str = TransactionType.ADJUSTMENT
     reference_id: UUID | None = None
+    reason: str | None = Field(default=None, max_length=2000)
 
-    @field_validator("type")
-    @classmethod
-    def valid_type(cls, v: str) -> str:
-        if v not in TransactionType.ALL:
+    @model_validator(mode="after")
+    def _valid_type(self) -> "TransactionCreate":
+        if self.type not in TransactionType.ALL:
             raise ValueError(f"type must be one of {sorted(TransactionType.ALL)}")
-        return v
+        return self
+
+    @model_validator(mode="after")
+    def _adjustment_requires_reason(self) -> "TransactionCreate":
+        # Adjustments are the one place quantity_on_hand changes with no PO or
+        # shipment behind it (journeys.md Journey 4) — the reason is the only
+        # audit trail, so it can't be blank for that type.
+        if self.type == TransactionType.ADJUSTMENT and not (self.reason or "").strip():
+            raise ValueError("reason is required for adjustment transactions")
+        return self
 
 
 class TransactionRead(OrmModel):
@@ -31,4 +40,6 @@ class TransactionRead(OrmModel):
     quantity_delta: int
     type: str
     reference_id: UUID | None
+    reason: str | None
+    created_by: str | None
     occurred_at: datetime

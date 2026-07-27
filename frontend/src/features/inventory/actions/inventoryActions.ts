@@ -19,6 +19,9 @@ export async function submitManualAdjustment(
   if (!Number.isFinite(input.quantity_delta) || input.quantity_delta === 0) {
     return { ok: false, error: "Quantity delta must be a non-zero number." };
   }
+  if (input.type === "adjustment" && !input.reason?.trim()) {
+    return { ok: false, error: "A reason is required for adjustments." };
+  }
   try {
     await createTransaction(input);
     revalidatePath(`/inventory/${input.product_id}`);
