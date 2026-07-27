@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.models import UserWarehouseAssignment, Warehouse
-from app.schemas.warehouse import WarehouseCreate
+from app.schemas.warehouse import WarehouseCreate, WarehouseUpdate
 
 
 def list_warehouses(db: Session, tenant_id: UUID) -> list[Warehouse]:
@@ -26,6 +26,18 @@ def get_warehouse(db: Session, warehouse_id: UUID) -> Warehouse:
 def create_warehouse(db: Session, data: WarehouseCreate, tenant_id: UUID) -> Warehouse:
     wh = Warehouse(name=data.name, address=data.address, tenant_id=tenant_id)
     db.add(wh)
+    db.commit()
+    return wh
+
+
+def update_warehouse(db: Session, warehouse_id: UUID, data: WarehouseUpdate) -> Warehouse:
+    wh = get_warehouse(db, warehouse_id)
+    if data.name is not None:
+        wh.name = data.name
+    if data.address is not None:
+        wh.address = data.address
+    if data.is_active is not None:
+        wh.is_active = data.is_active
     db.commit()
     return wh
 

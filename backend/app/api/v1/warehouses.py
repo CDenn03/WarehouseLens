@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.permissions.warehouse import WAREHOUSE_ASSIGN_USER, WAREHOUSE_CREATE
+from app.core.permissions.warehouse import (
+    WAREHOUSE_ASSIGN_USER,
+    WAREHOUSE_CREATE,
+    WAREHOUSE_UPDATE,
+)
 from app.core.security import (
     CurrentUser,
     enforce_tenant_scope,
@@ -16,6 +20,7 @@ from app.schemas.warehouse import (
     AssignmentRead,
     WarehouseCreate,
     WarehouseRead,
+    WarehouseUpdate,
 )
 from app.services import warehouse_service
 
@@ -36,6 +41,18 @@ def create_warehouse(
     user: CurrentUser = Depends(require_permission(WAREHOUSE_CREATE)),
 ):
     return warehouse_service.create_warehouse(db, data, user.tenant_id)
+
+
+@router.patch("/{warehouse_id}", response_model=WarehouseRead)
+def update_warehouse(
+    warehouse_id: UUID,
+    data: WarehouseUpdate,
+    db: Session = Depends(get_db),
+    user: CurrentUser = Depends(require_permission(WAREHOUSE_UPDATE)),
+):
+    wh = warehouse_service.get_warehouse(db, warehouse_id)
+    enforce_tenant_scope(wh.tenant_id, user.tenant_id)
+    return warehouse_service.update_warehouse(db, warehouse_id, data)
 
 
 @router.post("/{warehouse_id}/assignments", response_model=AssignmentRead, status_code=201)

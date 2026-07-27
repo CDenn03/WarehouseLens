@@ -22,7 +22,12 @@ from .procurement import (
     PROCUREMENT_SUPPLIER_CREATE,
 )
 from .platform import PLATFORM_TENANT_MANAGE
-from .warehouse import WAREHOUSE_ASSIGN_USER, WAREHOUSE_CREATE, WAREHOUSE_GLOBAL
+from .warehouse import (
+    WAREHOUSE_ASSIGN_USER,
+    WAREHOUSE_CREATE,
+    WAREHOUSE_GLOBAL,
+    WAREHOUSE_UPDATE,
+)
 
 ROLE_DEFINITIONS: dict[str, set[str]] = {
     # Full operational admin — all permissions except IAM and platform.
@@ -48,14 +53,16 @@ ROLE_DEFINITIONS: dict[str, set[str]] = {
         AGENT_INVOKE,
     },
 
-    # Procurement Officer: procurement + inventory.read + warehouse.global + dashboard.
+    # Procurement Officer: procurement + inventory.read + dashboard. Warehouse-
+    # scoped like Warehouse Manager (via user_warehouse_assignments) — no
+    # warehouse.global, so a PO can only be created/received against a
+    # warehouse this officer is actually assigned to (journeys.md Journey 1).
     "procurement_officer": {
         PROCUREMENT_SUPPLIER_CREATE,
         PROCUREMENT_ORDER_CREATE,
         PROCUREMENT_ORDER_RECEIVE,
         INVENTORY_READ,
         INVENTORY_PRODUCT_CREATE,
-        WAREHOUSE_GLOBAL,
         DASHBOARD_READ,
         FORECAST_READ,
         AGENT_INVOKE,
@@ -72,6 +79,7 @@ ROLE_DEFINITIONS: dict[str, set[str]] = {
         IAM_USER_ROLE_ASSIGN,
         IAM_USER_READ,
         WAREHOUSE_CREATE,
+        WAREHOUSE_UPDATE,
         WAREHOUSE_ASSIGN_USER,
     },
 

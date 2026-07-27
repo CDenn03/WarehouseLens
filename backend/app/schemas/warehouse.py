@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.common import OrmModel
 
@@ -9,6 +9,20 @@ from app.schemas.common import OrmModel
 class WarehouseCreate(BaseModel):
     name: str = Field(max_length=120)
     address: str | None = Field(default=None, max_length=255)
+
+
+class WarehouseUpdate(BaseModel):
+    """PATCH /warehouses/{id} — edit name/address, or deactivate/reactivate."""
+
+    name: str | None = Field(default=None, max_length=120)
+    address: str | None = Field(default=None, max_length=255)
+    is_active: bool | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self) -> "WarehouseUpdate":
+        if self.name is None and self.address is None and self.is_active is None:
+            raise ValueError("provide at least one field to update")
+        return self
 
 
 class WarehouseRead(OrmModel):
