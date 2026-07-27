@@ -408,7 +408,9 @@ def create_user(
 
     result = keycloak_admin.provision_user(data.email, username=data.username)
 
-    user = _upsert_local_user(db, result.user.id, result.user.email or data.email, result.user.username or data.username)
+    from app.core.security import upsert_user
+    upsert_user(db, result.user.id, result.user.email or data.email, result.user.username or data.username)
+    user = db.get(User, result.user.id)
     if db.get(UserTenant, (user.id, tenant_id)) is None:
         db.add(UserTenant(user_id=user.id, tenant_id=tenant_id))
 
