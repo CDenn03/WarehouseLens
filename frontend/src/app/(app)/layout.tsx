@@ -31,6 +31,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     <AppShell
       appName={appName}
       dashboard={me?.dashboard ?? null}
+      permissions={me?.permissions ?? []}
       userName={session.user.name}
       headerContext={
         me?.dashboard ? HEADER_CONTEXT[me.dashboard] : "No dashboard assigned"

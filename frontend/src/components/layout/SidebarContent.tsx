@@ -9,6 +9,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
+  /** If set, the item is hidden unless the user holds this permission. */
+  requiredPermission?: string;
 }
 
 const iconClass = "h-5 w-5 shrink-0";
