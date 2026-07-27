@@ -71,8 +71,7 @@ export async function getWarehouseHealth(
       return {
         id: String(w.id),
         name: w.name,
-        code: w.code,
-        location: w.location,
+        location: w.address ?? undefined,
         inventory_value: kpis.total_inventory_value,
         skus_below_reorder: kpis.skus_below_reorder_point,
         open_outbound: openOutbound,

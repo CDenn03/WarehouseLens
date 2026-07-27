@@ -28,7 +28,6 @@ export interface AbcRankingRow {
 export interface WarehouseHealth {
   id: string;
   name: string;
-  code?: string;
   location?: string;
   /** Total inventory value (USD) for this warehouse. */
   inventory_value: number;
