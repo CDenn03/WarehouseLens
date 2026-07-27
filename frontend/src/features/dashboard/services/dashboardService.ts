@@ -2,6 +2,7 @@ import { apiFetch } from "@/lib/api";
 import type { Warehouse } from "@/features/inventory/types";
 import type { OutboundRequest } from "@/features/outbound/types";
 import { outboundStatusTone } from "@/features/outbound/types";
+import type { PaginatedResponse } from "@/features/outbound/services/outboundService";
 import type {
   AbcRankingRow,
   KpiSummary,
@@ -51,12 +52,12 @@ export async function getWarehouseHealth(
           skus_below_reorder_point: 0,
           open_outbound_requests: 0,
         })),
-        apiFetch<OutboundRequest[]>("/outbound-requests", {
+        apiFetch<PaginatedResponse<OutboundRequest>>("/outbound-requests", {
           query: { warehouse_id: String(w.id) },
-        }).catch(() => [] as OutboundRequest[]),
+        }).catch(() => ({ items: [] as OutboundRequest[], total: 0, page: 1, page_size: 20 })),
       ]);
 
-      const openOutbound = outboundRequests.filter((r) =>
+      const openOutbound = outboundRequests.items.filter((r) =>
         ["requested", "picking", "packed"].includes(r.status),
       ).length;
 
@@ -89,9 +90,11 @@ export async function getWarehouseHealth(
 export async function getRecentActivity(
   warehouseId?: string,
 ): Promise<RecentActivity[]> {
-  const requests = await apiFetch<OutboundRequest[]>("/outbound-requests", {
+  const response = await apiFetch<PaginatedResponse<OutboundRequest>>("/outbound-requests", {
     query: { warehouse_id: warehouseId },
-  }).catch(() => [] as OutboundRequest[]);
+  }).catch(() => ({ items: [] as OutboundRequest[], total: 0, page: 1, page_size: 20 }));
+
+  const requests = response.items;
 
   // Sort newest first; take up to 10
   const sorted = [...requests].sort((a, b) => {
