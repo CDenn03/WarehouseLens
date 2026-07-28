@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     initial_admin_password: str = "Changeme1"
 
     llm_api_key: str = ""
-    llm_model: str = "claude-sonnet-5"
+    llm_model: str = "gemini-2.5-flash"
 
     # Worker cadences (seconds). Analytics every 5 min, forecasts hourly.
     worker_aggregation_interval: int = 300
