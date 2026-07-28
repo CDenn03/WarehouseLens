@@ -1,13 +1,15 @@
 """Analytics Aggregation tool — dashboard KPIs, optionally scoped to one
 warehouse. Example: "What's our total inventory value across all warehouses?"
-
-LEARNING AREA — scaffold.
 """
 
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent.tools._common import resolve_scoped_warehouse_ids, to_uuid
 from app.core.security import CurrentUser
+from app.models import Warehouse
+from app.services import dashboard_service
 
 
 class AnalyticsAggregationInput(BaseModel):
@@ -15,19 +17,42 @@ class AnalyticsAggregationInput(BaseModel):
     metrics: list[str] = ["total_inventory_value", "skus_below_reorder_point", "open_outbound_requests"]
 
 
+def _pick(kpis, metrics: list[str]) -> dict:
+    data = kpis.model_dump(mode="json")  # Decimal -> JSON-safe primitives
+    return {k: data[k] for k in metrics if k in data}
+
+
 def analytics_aggregation_tool(
     input: AnalyticsAggregationInput, db: Session, user: CurrentUser
 ) -> dict:
-    """TODO(learning): thinnest tool of the five — the queries already exist.
-      1. Scope check; for scoped roles with warehouse_id=None, either 403 or
-         (friendlier) aggregate over just their assigned warehouses by passing
-         scope_filter_warehouse_ids(db, user) as `visible`. Pick one and make the
-         eval set assert it.
-      2. Call dashboard_service.get_kpis(db, warehouse_id, visible) and filter to
-         the requested metrics.
-      3. Return {"metrics": {...}, "warehouse_id": ...}.
-    The point of this tool existing separately from inventory_query: KPIs are
-    pre-defined aggregates, so the planner can answer "how much is our stock
-    worth" without inventing an aggregation over raw rows.
+    """Thin pass-through to dashboard_service.get_kpis — the one tool where
+    "reuse the service" is unambiguous, the shapes match exactly.
+
+    When no single warehouse is requested and more than one is visible, also
+    includes a per-warehouse breakdown alongside the aggregate rollup — that's
+    what lets "which warehouse has the most inventory value" be answered from
+    this tool's output without a second input field for it. The input schema
+    is unchanged; only the response is enriched.
     """
-    return {"metrics": {}, "note": "analytics_aggregation is a learning scaffold — not implemented"}
+    warehouse_id = to_uuid(input.warehouse_id)
+    visible = resolve_scoped_warehouse_ids(db, user, warehouse_id)
+
+    result: dict = {
+        "warehouse_id": str(warehouse_id) if warehouse_id else None,
+        "metrics": _pick(dashboard_service.get_kpis(db, warehouse_id, visible), input.metrics),
+    }
+
+    if warehouse_id is None and len(visible) > 1:
+        warehouses = db.execute(
+            select(Warehouse).where(Warehouse.id.in_(visible)).order_by(Warehouse.name)
+        ).scalars()
+        result["by_warehouse"] = [
+            {
+                "warehouse_id": str(w.id),
+                "warehouse_name": w.name,
+                "metrics": _pick(dashboard_service.get_kpis(db, w.id, visible), input.metrics),
+            }
+            for w in warehouses
+        ]
+
+    return result

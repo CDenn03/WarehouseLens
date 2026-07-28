@@ -83,9 +83,5 @@ def test_duplicate_sku_conflict(client, seeded):
     assert response.status_code == 409
 
 
-def test_agent_scaffold_responds(client, seeded):
-    response = client.post(
-        "/api/v1/agent/query", headers=ADMIN, json={"question": "hello", "warehouse_id": None}
-    )
-    assert response.status_code == 200
-    assert "scaffold" in response.json()["answer"]
+# Agent/planner behavior is covered in tests/test_agent.py, now that the
+# planner is a real LangGraph app rather than the canned scaffold response.
