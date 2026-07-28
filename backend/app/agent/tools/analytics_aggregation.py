@@ -2,6 +2,8 @@
 warehouse. Example: "What's our total inventory value across all warehouses?"
 """
 
+from typing import Literal
+
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -11,10 +13,20 @@ from app.core.security import CurrentUser
 from app.models import Warehouse
 from app.services import dashboard_service
 
+Metric = Literal["total_inventory_value", "skus_below_reorder_point", "open_outbound_requests"]
+
 
 class AnalyticsAggregationInput(BaseModel):
     warehouse_id: str | None = None  # None = all-warehouse rollup (if role allows)
-    metrics: list[str] = ["total_inventory_value", "skus_below_reorder_point", "open_outbound_requests"]
+    # Literal, not str: the planner LLM's tool-calling schema must be a closed
+    # vocabulary here, or it free-invents plausible-but-wrong names (e.g.
+    # "inventory_value") that _pick() then silently drops, leaving the
+    # synthesis call with no data to answer from.
+    metrics: list[Metric] = [
+        "total_inventory_value",
+        "skus_below_reorder_point",
+        "open_outbound_requests",
+    ]
 
 
 def _pick(kpis, metrics: list[str]) -> dict:

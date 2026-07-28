@@ -3,7 +3,7 @@
 Tool functions are called directly (no LLM involved at all) for the bulk of
 this coverage — per agent-core-spec.md §6, that's cheaper and faster than the
 eval harness for catching regressions. A handful of HTTP-level tests mock
-ChatAnthropic to exercise the planner graph end to end, including the
+ChatGoogleGenerativeAI to exercise the planner graph end to end, including the
 scope-injection rule (agent-core-spec.md §4.5) — no real network/LLM call is
 ever made in these tests.
 """
@@ -262,13 +262,14 @@ class _FakeBoundLLM:
         return self._message
 
 
-def _fake_chat_anthropic(tool_name: str | None, tool_args: dict, answer: str = "Here is the data."):
-    """A stand-in for ChatAnthropic: bind_tools().invoke() always returns the
-    given tool call (or none); plain invoke() (the synthesize call) returns
-    canned prose. Patched in via app.agent.planner.ChatAnthropic."""
+def _fake_chat_google(tool_name: str | None, tool_args: dict, answer: str = "Here is the data."):
+    """A stand-in for ChatGoogleGenerativeAI: bind_tools().invoke() always
+    returns the given tool call (or none); plain invoke() (the synthesize
+    call) returns canned prose. Patched in via
+    app.agent.planner.ChatGoogleGenerativeAI."""
     calls = [] if tool_name is None else [{"name": tool_name, "args": dict(tool_args)}]
 
-    class _FakeChatAnthropic:
+    class _FakeChatGoogleGenerativeAI:
         def __init__(self, *_args, **_kwargs):
             pass
 
@@ -278,14 +279,14 @@ def _fake_chat_anthropic(tool_name: str | None, tool_args: dict, answer: str = "
         def invoke(self, _prompt):
             return _FakeMessage(content=answer)
 
-    return _FakeChatAnthropic
+    return _FakeChatGoogleGenerativeAI
 
 
 def test_agent_query_end_to_end_with_mocked_llm(client, seeded):
-    fake = _fake_chat_anthropic(
+    fake = _fake_chat_google(
         "InventoryQueryInput", {"below_reorder_point": True}, answer="Widget is low in Nairobi."
     )
-    with patch("app.agent.planner.ChatAnthropic", fake):
+    with patch("app.agent.planner.ChatGoogleGenerativeAI", fake):
         response = client.post(
             "/api/v1/agent/query",
             headers=ADMIN,
@@ -301,10 +302,10 @@ def test_agent_query_end_to_end_with_mocked_llm(client, seeded):
 def test_agent_query_scope_injection_overrides_llm_supplied_warehouse(client, seeded):
     """A malicious/hallucinated warehouse_id from the planner must never win
     over the caller's actual assignment (agent-core-spec.md §4.5)."""
-    fake = _fake_chat_anthropic(
+    fake = _fake_chat_google(
         "InventoryQueryInput", {"warehouse_id": str(seeded["mombasa"].id)}
     )
-    with patch("app.agent.planner.ChatAnthropic", fake):
+    with patch("app.agent.planner.ChatGoogleGenerativeAI", fake):
         response = client.post(
             "/api/v1/agent/query",
             headers=NAIROBI_MANAGER,
@@ -317,8 +318,8 @@ def test_agent_query_scope_injection_overrides_llm_supplied_warehouse(client, se
 
 
 def test_agent_query_clarifies_when_no_tool_fits(client, seeded):
-    fake = _fake_chat_anthropic(None, {})
-    with patch("app.agent.planner.ChatAnthropic", fake):
+    fake = _fake_chat_google(None, {})
+    with patch("app.agent.planner.ChatGoogleGenerativeAI", fake):
         response = client.post(
             "/api/v1/agent/query",
             headers=ADMIN,

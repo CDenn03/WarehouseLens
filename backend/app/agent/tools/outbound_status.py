@@ -2,6 +2,8 @@
 shipments. Example: "What's still in picking for the Mombasa warehouse?"
 """
 
+from typing import Literal
+
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -13,7 +15,10 @@ from app.models import OutboundRequest, Product
 
 class OutboundStatusInput(BaseModel):
     warehouse_id: str | None = None
-    status: str | None = None  # requested | picking | packed | shipped | delivered | cancelled
+    # Literal, not str: an unconstrained tool-calling schema lets the planner
+    # LLM free-invent a plausible-but-wrong status (e.g. "in_progress" instead
+    # of "picking"), silently matching zero rows instead of erroring.
+    status: Literal["requested", "picking", "packed", "shipped", "delivered", "cancelled"] | None = None
     include_pick_list_detail: bool = False
 
 

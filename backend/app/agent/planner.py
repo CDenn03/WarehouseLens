@@ -14,7 +14,7 @@ import logging
 from typing import Any, TypedDict
 from uuid import UUID
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, StateGraph
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
@@ -66,9 +66,9 @@ class AgentState(TypedDict, total=False):
 _NAME_BY_SCHEMA = {input_model.__name__: name for name, (input_model, _) in TOOL_REGISTRY.items()}
 
 
-def _llm(temperature: float = 0.0) -> ChatAnthropic:
+def _llm(temperature: float = 0.0) -> ChatGoogleGenerativeAI:
     settings = get_settings()
-    return ChatAnthropic(model=settings.llm_model, api_key=settings.llm_api_key, temperature=temperature)
+    return ChatGoogleGenerativeAI(model=settings.llm_model, google_api_key=settings.llm_api_key, temperature=temperature)
 
 
 def _is_global(user: CurrentUser) -> bool:
@@ -78,8 +78,8 @@ def _is_global(user: CurrentUser) -> bool:
 def plan_node(state: AgentState) -> AgentState:
     """One LLM call, schema-constrained via bind_tools: the model either picks
     exactly one tool + args, or calls none (routed to `clarify` downstream)."""
-    llm = _llm().bind_tools([input_model for input_model, _ in TOOL_REGISTRY.values()])
     try:
+        llm = _llm().bind_tools([input_model for input_model, _ in TOOL_REGISTRY.values()])
         response = llm.invoke([("system", SYSTEM_PROMPT), ("human", state["question"])])
     except Exception as exc:  # noqa: BLE001 — any transport/auth failure is an upstream dependency failure
         raise UpstreamError(f"LLM plan call failed: {exc}") from exc
