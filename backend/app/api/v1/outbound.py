@@ -13,6 +13,7 @@ from app.core.permissions.outbound import (
 )
 from app.core.security import (
     CurrentUser,
+    enforce_any_warehouse_scope,
     enforce_tenant_scope,
     enforce_warehouse_scope,
     get_current_user,
@@ -86,7 +87,12 @@ def get_outbound_request(
     request = outbound_service.get_outbound_request(db, request_id)
     wh = get_warehouse(db, request.source_warehouse_id)
     enforce_tenant_scope(wh.tenant_id, user.tenant_id)
-    enforce_warehouse_scope(db, user, request.source_warehouse_id)
+    # Read visibility is source-OR-destination (developer-guide.md §13.11) —
+    # the destination warehouse's Warehouse Manager can see an inbound
+    # transfer before delivery. Write actions below stay source-only.
+    enforce_any_warehouse_scope(
+        db, user, [request.source_warehouse_id, request.destination_warehouse_id]
+    )
     return request
 
 
@@ -99,6 +105,11 @@ def create_internal_transfer(
     wh = get_warehouse(db, data.source_warehouse_id)
     enforce_tenant_scope(wh.tenant_id, user.tenant_id)
     enforce_warehouse_scope(db, user, data.source_warehouse_id)
+    # The destination warehouse is a caller-supplied UUID with no scope check
+    # of its own otherwise — without this, a transfer could target a
+    # warehouse belonging to a different tenant entirely.
+    destination_wh = get_warehouse(db, data.destination_warehouse_id)
+    enforce_tenant_scope(destination_wh.tenant_id, user.tenant_id)
     return outbound_service.create_internal_transfer(db, data)
 
 

@@ -12,7 +12,7 @@ the building, just spoken for). Shipping decrements both.
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, InsufficientStockError, NotFoundError
@@ -75,10 +75,16 @@ def create_sales_order(db: Session, data: SalesOrderCreate) -> tuple[SalesOrder,
 
 
 def create_internal_transfer(db: Session, data: OutboundRequestCreate) -> OutboundRequest:
-    warehouse_service.get_warehouse(db, data.source_warehouse_id)
-    warehouse_service.get_warehouse(db, data.destination_warehouse_id)
+    source = warehouse_service.get_warehouse(db, data.source_warehouse_id)
+    destination = warehouse_service.get_warehouse(db, data.destination_warehouse_id)
     if data.source_warehouse_id == data.destination_warehouse_id:
         raise ConflictError("source and destination warehouse must differ")
+    # journeys.md Journey 3 precondition: both warehouses must be active.
+    # Only reachable now that PATCH /warehouses/{id} can deactivate one.
+    if not source.is_active:
+        raise ConflictError(f"source warehouse {source.id} is not active")
+    if not destination.is_active:
+        raise ConflictError(f"destination warehouse {destination.id} is not active")
     for item in data.items:
         inventory_service.get_product(db, item.product_id)
 
@@ -105,11 +111,24 @@ def list_outbound_requests(
     warehouse_id: UUID | None = None,
     status: str | None = None,
 ) -> dict:
+    """Visibility is source-OR-destination (developer-guide.md §13.11):
+    an internal transfer shows up for the destination warehouse's Warehouse
+    Manager too, read-only, not just the source side that can act on it."""
     stmt = select(OutboundRequest)
     if warehouse_id is not None:
-        stmt = stmt.where(OutboundRequest.source_warehouse_id == warehouse_id)
+        stmt = stmt.where(
+            or_(
+                OutboundRequest.source_warehouse_id == warehouse_id,
+                OutboundRequest.destination_warehouse_id == warehouse_id,
+            )
+        )
     else:
-        stmt = stmt.where(OutboundRequest.source_warehouse_id.in_(visible_warehouse_ids))
+        stmt = stmt.where(
+            or_(
+                OutboundRequest.source_warehouse_id.in_(visible_warehouse_ids),
+                OutboundRequest.destination_warehouse_id.in_(visible_warehouse_ids),
+            )
+        )
     if status is not None:
         stmt = stmt.where(OutboundRequest.status == status)
     stmt = stmt.order_by(OutboundRequest.created_at.desc())

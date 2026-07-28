@@ -17,6 +17,7 @@ JWKS cache has a 15-minute TTL and handles key rotation automatically.
 
 import logging
 import time
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from uuid import UUID
@@ -595,6 +596,28 @@ def enforce_warehouse_scope(db: Session, user: CurrentUser, warehouse_id: UUID |
         raise ForbiddenError("warehouse-scoped role must specify a warehouse_id")
     if warehouse_id not in assigned_warehouse_ids(db, user):
         raise ForbiddenError(f"not assigned to warehouse {warehouse_id}")
+
+
+def enforce_any_warehouse_scope(
+    db: Session, user: CurrentUser, warehouse_ids: Iterable[UUID | None]
+) -> None:
+    """Like enforce_warehouse_scope, but passes if the caller is assigned to
+    ANY of the given warehouses.
+
+    For read access to a resource that spans two warehouses — an internal
+    transfer's source and destination — either side's Warehouse Manager
+    should be able to see it (developer-guide.md §13.11, journeys.md
+    Journey 3). Write actions (pick-lists, ship, deliver) stay source-only
+    via the plain enforce_warehouse_scope; this is read-visibility only.
+    """
+    _ensure_permissions(db, user)
+    if _GLOBAL_PERMISSIONS & user.permissions:
+        return
+    ids = {w for w in warehouse_ids if w is not None}
+    if not ids:
+        raise ForbiddenError("warehouse-scoped role must specify a warehouse_id")
+    if not ids & assigned_warehouse_ids(db, user):
+        raise ForbiddenError(f"not assigned to any of {sorted(ids)}")
 
 
 def scope_filter_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
