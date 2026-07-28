@@ -81,11 +81,11 @@ Each spec uses the same template: Actor, Trigger, Preconditions, Flow, Postcondi
 **Postconditions:** `warehouse_stock.quantity_on_hand` decreased at source, increased at destination; `inventory_transactions` gains a `transfer_out` row at source and a `transfer_in` row at destination.
 
 **Edge cases:**
-- Destination warehouse inactive (`is_active = false`) — no documented validation preventing a transfer into it. Now that `PATCH /warehouses/{id}` exists to deactivate a warehouse (developer-guide.md §13.6), this is a real reachable state and still has no guard — worth a follow-up validation in `create_internal_transfer` if it comes up in practice.
+- **Resolved:** `create_internal_transfer` now rejects (409) if either the source or destination warehouse has `is_active = false` — closes the gap that opened up once `PATCH /warehouses/{id}` (developer-guide.md §13.6) made deactivation reachable.
 - **Resolved:** `transfer_out` is written at ship time, in the same `ship()` call that writes `issue` for external fulfillment (developer-guide.md §13.5) — mirrors `transfer_in` being written at delivery.
-- **Open question (still open):** RBAC scope checks in §9 are framed around a single `warehouse_id` per resource. `outbound_requests` for a transfer has two warehouse FKs — does a Warehouse Manager assigned only to the destination warehouse get any visibility into the transfer before it's delivered (e.g. to see it's inbound), or is visibility source-side only until delivery? Not resolved in the guide, and out of scope for this pass.
+- **Resolved:** a Warehouse Manager assigned only to the destination warehouse gets read-only visibility into the transfer before delivery — it shows up in their `GET /outbound-requests` list and `GET /outbound-requests/{id}` resolves for them. They still cannot generate a pick list, ship, or deliver it — those stay source-side only (developer-guide.md §13.11).
 
-**RBAC:** Warehouse Manager scoped to `source_warehouse_id` (creation, picking, shipping). Destination-side visibility is the open question above.
+**RBAC:** Warehouse Manager scoped to `source_warehouse_id` for write actions (creation, picking, shipping). Read visibility is source-OR-destination (§13.11).
 
 ---
 
