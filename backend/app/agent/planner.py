@@ -88,6 +88,19 @@ def plan_node(state: AgentState) -> AgentState:
     if not calls:
         return {**state, "tool_name": None, "tool_args": None}
 
+    if len(calls) > 1:
+        # The system prompt asks for exactly one call, but native tool-calling
+        # doesn't enforce it — surface it instead of silently dropping the rest,
+        # so a model that starts double-calling shows up in logs, not just as
+        # an unexplained accuracy dip.
+        logger.warning(
+            "planner returned %d tool calls for %r, using only the first (%s); dropped: %s",
+            len(calls),
+            state["question"],
+            calls[0]["name"],
+            [c["name"] for c in calls[1:]],
+        )
+
     call = calls[0]
     tool_name = _NAME_BY_SCHEMA.get(call["name"])
     return {**state, "tool_name": tool_name, "tool_args": dict(call.get("args") or {})}

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.agent.tools._common import resolve_scoped_warehouse_ids, to_uuid
+from app.agent.tools._common import cap_rows, capped, resolve_scoped_warehouse_ids, to_uuid
 from app.core.security import CurrentUser
 from app.models import Product, Warehouse, WarehouseStock
 
@@ -42,8 +42,8 @@ def inventory_query_tool(input: InventoryQueryInput, db: Session, user: CurrentU
     if input.product_sku:
         stmt = stmt.where(Product.sku == input.product_sku)
 
-    rows = db.execute(stmt).all()
-    return {
+    rows, truncated = cap_rows(db.execute(capped(stmt)).all())
+    result = {
         "results": [
             {
                 "sku": product.sku,
@@ -57,3 +57,10 @@ def inventory_query_tool(input: InventoryQueryInput, db: Session, user: CurrentU
             for stock, product, warehouse_name in rows
         ]
     }
+    if truncated:
+        result["truncated"] = True
+        result["note"] = (
+            "Only the first 500 matching rows are shown — narrow the question "
+            "(add a warehouse or SKU filter) to see the rest."
+        )
+    return result

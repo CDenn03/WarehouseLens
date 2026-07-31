@@ -79,7 +79,11 @@ class OutboundRequest(Base, UuidPkMixin, CreatedAtMixin):
     pick_lists: Mapped[list["PickList"]] = relationship(
         back_populates="outbound_request", lazy="selectin"
     )
-    shipments: Mapped[list["Shipment"]] = relationship(lazy="selectin")
+    # ship() only ever creates one shipment per request today (status can't
+    # revert to PACKED to ship again), but pin the order explicitly rather
+    # than rely on unspecified row order — outbound_status_tool takes the
+    # last entry as "the" shipment to report tracking info for.
+    shipments: Mapped[list["Shipment"]] = relationship(lazy="selectin", order_by="Shipment.shipped_at")
 
     @property
     def is_internal_transfer(self) -> bool:

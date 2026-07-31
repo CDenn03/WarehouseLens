@@ -2,13 +2,14 @@
 shipments. Example: "What's still in picking for the Mombasa warehouse?"
 """
 
+from datetime import date, datetime, time
 from typing import Literal
 
 from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.agent.tools._common import resolve_scoped_warehouse_ids, to_uuid
+from app.agent.tools._common import cap_rows, capped, resolve_scoped_warehouse_ids, to_uuid
 from app.core.security import CurrentUser
 from app.models import OutboundRequest, Product
 
@@ -20,6 +21,8 @@ class OutboundStatusInput(BaseModel):
     # of "picking"), silently matching zero rows instead of erroring.
     status: Literal["requested", "picking", "packed", "shipped", "delivered", "cancelled"] | None = None
     include_pick_list_detail: bool = False
+    date_from: str | None = None  # ISO date; filters on created_at, inclusive
+    date_to: str | None = None
 
 
 def outbound_status_tool(input: OutboundStatusInput, db: Session, user: CurrentUser) -> dict:
@@ -49,13 +52,31 @@ def outbound_status_tool(input: OutboundStatusInput, db: Session, user: CurrentU
         )
     if input.status:
         stmt = stmt.where(OutboundRequest.status == input.status)
+    if input.date_from:
+        stmt = stmt.where(
+            OutboundRequest.created_at >= datetime.combine(date.fromisoformat(input.date_from), time.min)
+        )
+    if input.date_to:
+        stmt = stmt.where(
+            OutboundRequest.created_at <= datetime.combine(date.fromisoformat(input.date_to), time.max)
+        )
     stmt = stmt.order_by(OutboundRequest.created_at.desc())
 
-    requests = list(db.execute(stmt).scalars())
+    requests, truncated = cap_rows(list(db.execute(capped(stmt)).scalars()))
 
     product_skus: dict = {}
     if input.include_pick_list_detail:
-        product_skus = {p.id: p.sku for p in db.execute(select(Product)).scalars()}
+        referenced_ids = {
+            item.product_id
+            for request in requests
+            for pick_list in request.pick_lists
+            for item in pick_list.items
+        }
+        if referenced_ids:
+            product_skus = {
+                p.id: p.sku
+                for p in db.execute(select(Product).where(Product.id.in_(referenced_ids))).scalars()
+            }
 
     results = []
     for request in requests:
@@ -82,4 +103,11 @@ def outbound_status_tool(input: OutboundStatusInput, db: Session, user: CurrentU
             ]
         results.append(entry)
 
-    return {"requests": results}
+    result = {"requests": results}
+    if truncated:
+        result["truncated"] = True
+        result["note"] = (
+            "Only the first 500 matching requests are shown — narrow the "
+            "question (add a status, warehouse, or date range) to see the rest."
+        )
+    return result
