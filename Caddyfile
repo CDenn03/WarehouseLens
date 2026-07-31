@@ -1,0 +1,18 @@
+# Reverse proxy + automatic Let's Encrypt TLS for the two publicly-reachable
+# services. Everything else (backend, worker, redis) stays off this file
+# entirely — they're only reachable on the compose network.
+#
+# {$VAR} pulls from .env.prod via docker-compose.prod.yml's `env_file` on the
+# caddy service. Both domains must already point at this VM's public IP
+# (A record) before Caddy can issue certificates for them — see
+# ORACLE_CLOUD.md step 4. These are bare hostnames (no https://) — Caddy
+# infers HTTPS from a domain-shaped site address and provisions the cert
+# itself.
+
+{$FRONTEND_DOMAIN} {
+	reverse_proxy frontend:3000
+}
+
+{$KEYCLOAK_DOMAIN} {
+	reverse_proxy keycloak:8080
+}

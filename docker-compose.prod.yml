@@ -1,0 +1,87 @@
+# Single-VM production deployment (e.g. an Oracle Cloud Always Free Ampere A1
+# instance) — see ORACLE_CLOUD.md. Postgres is NOT here: it lives on Neon, the
+# same as the Railway plan in docs/developer-guide.md Section 11.
+#
+# Differences from docker-compose.yml (local dev), on purpose:
+#   - no bind mounts / --reload / start-dev — these are the built images, run
+#     the way they'll actually run
+#   - migrations are NOT run automatically on boot (see backend/entrypoint.sh's
+#     own comment on why) — run them once, deliberately, per ORACLE_CLOUD.md
+#   - nothing is published to the host except Caddy's 80/443 — frontend and
+#     keycloak are only reachable through Caddy's TLS; backend, worker, and
+#     redis aren't reachable from outside the VM at all
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file: .env.prod
+    depends_on: [frontend, keycloak]
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    restart: unless-stopped
+    command: start --optimized
+    env_file: .env.prod
+    environment:
+      - KC_DB=postgres
+      # KEYCLOAK_DB_URL etc. come from .env.prod — Neon's *second* database
+      # (see ORACLE_CLOUD.md step 1), not the app's wms database.
+      - KC_DB_URL=${KEYCLOAK_DB_URL}
+      - KC_DB_USERNAME=${KEYCLOAK_DB_USERNAME}
+      - KC_DB_PASSWORD=${KEYCLOAK_DB_PASSWORD}
+      - KC_HOSTNAME=${KEYCLOAK_DOMAIN}
+      - KC_HTTP_ENABLED=true
+      - KC_PROXY_HEADERS=xforwarded
+      # Keycloak's own bootstrap-admin var name (KEYCLOAK_ADMIN) differs from
+      # ours (KEYCLOAK_ADMIN_USERNAME, chosen to match the backend's admin-API
+      # credential field) — remap it here. KEYCLOAK_ADMIN_PASSWORD needs no
+      # remap: both consumers happen to use that exact name already.
+      - KEYCLOAK_ADMIN=${KEYCLOAK_ADMIN_USERNAME}
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      - KEYCLOAK_INTERNAL_URL=http://keycloak:8080/realms/warehouselens
+      - KEYCLOAK_CLIENT_ID=warehouselens-backend
+      - KEYCLOAK_ADMIN_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=warehouselens
+      - KEYCLOAK_ADMIN_AUTH_REALM=master
+      - KEYCLOAK_ADMIN_CLIENT_ID=admin-cli
+    depends_on: [redis, keycloak]
+
+  worker:
+    build: ./backend
+    restart: unless-stopped
+    command: python -m app.worker
+    env_file: .env.prod
+    depends_on: [redis]
+
+  frontend:
+    build:
+      context: ./frontend
+      # no `target:` — this builds through to the production `runner` stage,
+      # unlike the local compose file's `target: dev`.
+    restart: unless-stopped
+    env_file: .env.prod
+    environment:
+      - API_URL=http://backend:8000
+    depends_on: [backend]
+
+volumes:
+  caddy_data:
+  caddy_config:
