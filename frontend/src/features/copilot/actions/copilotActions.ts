@@ -18,6 +18,7 @@ export async function askCopilot(
       ok: true,
       answer: response.answer,
       toolUsed: response.tool_used,
+      data: response.data,
     };
   } catch (error) {
     return { ok: false, error: getErrorMessage(error) };

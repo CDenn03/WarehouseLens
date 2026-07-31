@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import type { Warehouse } from "@/features/inventory/types";
 import { askCopilot } from "@/features/copilot/actions/copilotActions";
 import type { ChatMessage } from "@/features/copilot/types";
+import { CopilotToolResult } from "@/features/copilot/components/CopilotToolResult";
 
 const suggestions = [
   "Which SKUs are below their reorder point?",
@@ -23,10 +24,18 @@ function nextId(): string {
   return `msg-${messageCounter}`;
 }
 
+/** "inventory_query" -> "Inventory Query" */
+function formatToolLabel(toolName: string): string {
+  return toolName
+    .split("_")
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return (
-    <div className={cn("flex", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
       <div
         className={cn(
           "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
@@ -41,11 +50,13 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {!isUser && message.toolUsed && (
           <div className="mt-2">
             <Badge tone="brand" className="normal-case">
-              tool: {message.toolUsed}
+              {formatToolLabel(message.toolUsed)}
             </Badge>
           </div>
         )}
       </div>
+      {/* Structured data behind the prose — full result set, not just what the LLM mentioned. */}
+      {!isUser && !message.isError && <CopilotToolResult data={message.data} />}
     </div>
   );
 }
@@ -84,6 +95,7 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
               role: "assistant",
               content: result.answer,
               toolUsed: result.toolUsed,
+              data: result.data,
             }
           : {
               id: nextId(),
