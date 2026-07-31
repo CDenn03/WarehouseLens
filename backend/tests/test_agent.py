@@ -8,11 +8,12 @@ scope-injection rule (agent-core-spec.md §4.5) — no real network/LLM call is
 ever made in these tests.
 """
 
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
 
+from app.agent.tools._common import cap_rows
 from app.agent.tools.analytics_aggregation import (
     AnalyticsAggregationInput,
     analytics_aggregation_tool,
@@ -27,7 +28,15 @@ from app.agent.tools.supplier_performance import (
 )
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.core.security import CurrentUser
-from app.models import OutboundRequest, OutboundRequestItem, PurchaseOrder, PurchaseOrderItem, User, UserTenant
+from app.models import (
+    OutboundRequest,
+    OutboundRequestItem,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Shipment,
+    User,
+    UserTenant,
+)
 from app.models.authorization import UserRole
 from app.models.procurement import POStatus
 from app.models.warehouse import UserWarehouseAssignment
@@ -145,6 +154,43 @@ def test_outbound_status_lists_requests(db_session, seeded):
     assert any(r["id"] == str(request.id) for r in result["requests"])
 
 
+def test_outbound_status_reports_most_recent_shipment(db_session, seeded):
+    # ship() only ever creates one shipment per request in the current
+    # workflow, but the tool takes "the last one" — pin that the relationship
+    # orders by shipped_at rather than relying on unspecified row order, so a
+    # future multi-shipment flow (e.g. a reship) doesn't silently report
+    # stale tracking info.
+    request = OutboundRequest(
+        source_warehouse_id=seeded["nairobi"].id,
+        destination_warehouse_id=None,
+        status="shipped",
+        items=[OutboundRequestItem(product_id=seeded["gadget"].id, quantity_requested=5)],
+    )
+    db_session.add(request)
+    db_session.flush()
+    db_session.add(
+        Shipment(
+            outbound_request_id=request.id,
+            carrier="OldCarrier",
+            tracking_number="OLD-1",
+            shipped_at=datetime.now(UTC) - timedelta(days=5),
+        )
+    )
+    db_session.add(
+        Shipment(
+            outbound_request_id=request.id,
+            carrier="NewCarrier",
+            tracking_number="NEW-1",
+            shipped_at=datetime.now(UTC),
+        )
+    )
+    db_session.commit()
+
+    result = outbound_status_tool(OutboundStatusInput(), db_session, _admin_user(seeded))
+    entry = next(r for r in result["requests"] if r["id"] == str(request.id))
+    assert entry["tracking_number"] == "NEW-1"
+
+
 def test_outbound_status_shows_inbound_transfer_to_destination_manager(db_session, seeded):
     """developer-guide.md §13.11: read visibility is source-OR-destination."""
     request = OutboundRequest(
@@ -237,12 +283,54 @@ def test_forecast_tool_unknown_sku_raises_not_found(db_session, seeded):
         )
 
 
+# --- Row cap (shared helper: inventory_query, outbound_status) ------------
+
+
+def test_cap_rows_passes_through_under_limit():
+    rows, truncated = cap_rows([1, 2, 3], limit=5)
+    assert rows == [1, 2, 3]
+    assert truncated is False
+
+
+def test_cap_rows_truncates_and_flags_over_limit():
+    rows, truncated = cap_rows([1, 2, 3, 4, 5], limit=3)
+    assert rows == [1, 2, 3]
+    assert truncated is True
+
+
 # --- Report Synthesis -----------------------------------------------------
 
 
 def test_report_synthesis_combines_sections(db_session, seeded):
     result = report_synthesis_tool(ReportSynthesisInput(), db_session, _admin_user(seeded))
-    assert {s["title"] for s in result["sections"]} == {"Inventory KPIs", "Outbound Activity"}
+    titles = [s["title"] for s in result["sections"]]
+    assert titles[0] == "Inventory KPIs"
+    assert titles[1] == "Outbound Activity (last 7 days)"
+
+
+def test_report_synthesis_windows_outbound_section_by_period_days(db_session, seeded):
+    # period_days must actually reach the outbound query as a date_from bound
+    # — a request from 30 days ago should drop out of a 7-day report but
+    # still show up once the window is widened past it.
+    old_request = OutboundRequest(
+        source_warehouse_id=seeded["nairobi"].id,
+        destination_warehouse_id=None,
+        status="requested",
+        created_at=datetime.now(UTC) - timedelta(days=30),
+        items=[OutboundRequestItem(product_id=seeded["gadget"].id, quantity_requested=5)],
+    )
+    db_session.add(old_request)
+    db_session.commit()
+
+    def outbound_ids(period_days: int) -> set[str]:
+        result = report_synthesis_tool(
+            ReportSynthesisInput(period_days=period_days), db_session, _admin_user(seeded)
+        )
+        section = next(s for s in result["sections"] if s["title"].startswith("Outbound Activity"))
+        return {r["id"] for r in section["data"]["requests"]}
+
+    assert str(old_request.id) not in outbound_ids(7)
+    assert str(old_request.id) in outbound_ids(60)
 
 
 # --- Planner (mocked LLM — no real network/API call) --------------------------
