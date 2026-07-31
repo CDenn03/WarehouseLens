@@ -12,6 +12,7 @@ htmlcov/
 # Env / secrets
 .env
 .env.local
+.env.prod
 
 # Local databases
 *.db
