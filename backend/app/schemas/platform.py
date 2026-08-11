@@ -18,9 +18,6 @@ def _clean_email(value: str) -> str:
     return email
 
 
-# ── Tenants ────────────────────────────────────────────────────────────────
-
-
 class TenantCreate(BaseModel):
     name: str
     # Required: creating a tenant creates its first user.  A tenant with no way
@@ -99,9 +96,6 @@ class ProvisionedAdminRead(BaseModel):
 class TenantWithAdminRead(BaseModel):
     tenant: TenantRead
     admin: ProvisionedAdminRead | None = None
-
-
-# ── Platform admins ────────────────────────────────────────────────────────
 
 
 class PlatformAdminRead(BaseModel):

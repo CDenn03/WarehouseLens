@@ -40,8 +40,6 @@ async function run<T>(fn: () => Promise<T>): Promise<ActionResultWith<T>> {
   }
 }
 
-// ── Tenants ────────────────────────────────────────────────────────────────
-
 export async function submitCreateTenant(
   data: TenantCreate,
 ): Promise<ActionResultWith<TenantWithAdminRead>> {
@@ -74,8 +72,6 @@ export async function submitResetTenantAdminPassword(
 ): Promise<ActionResultWith<PasswordResetRead>> {
   return run(() => resetTenantAdminPassword(tenantId));
 }
-
-// ── Platform admins ────────────────────────────────────────────────────────
 
 export async function submitCreatePlatformAdmin(
   data: PlatformAdminCreate,

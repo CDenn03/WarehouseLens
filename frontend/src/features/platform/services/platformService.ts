@@ -19,8 +19,6 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
-// ── Tenants ────────────────────────────────────────────────────────────────
-
 export function listTenants(
   params?: Record<string, string | number>,
 ): Promise<PaginatedResponse<TenantRead>> {
@@ -62,8 +60,6 @@ export function resetTenantAdminPassword(
     { method: "POST" },
   );
 }
-
-// ── Platform admins ────────────────────────────────────────────────────────
 
 export function listPlatformAdmins(
   params?: Record<string, string | number>,

@@ -46,7 +46,6 @@ export async function PlatformDashboardPage() {
         actions={<TenantFormModal />}
       />
 
-      {/* ── Summary KPIs ── */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
@@ -131,7 +130,6 @@ export async function PlatformDashboardPage() {
         ))}
       </div>
 
-      {/* ── Tenants table + admins ── */}
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Tenants table — 2/3 width */}
         <div className="xl:col-span-2">

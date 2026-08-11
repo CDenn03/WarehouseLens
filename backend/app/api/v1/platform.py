@@ -43,9 +43,6 @@ from app.services import platform_service
 router = APIRouter(prefix="/platform", tags=["platform"])
 
 
-# ── Tenant endpoints ───────────────────────────────────────────────────────
-
-
 def _pagination(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -117,9 +114,6 @@ def reset_tenant_admin_password(
         db, actor, tenant_id
     )
     return PasswordResetRead(user_id=user_id, email=email, temporary_password=password)
-
-
-# ── Platform admin endpoints ───────────────────────────────────────────────
 
 
 @router.get("/admins", response_model=PaginatedResponse)

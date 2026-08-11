@@ -49,8 +49,6 @@ from app.models.outbound import OutboundStatus  # noqa: E402
 from app.models.procurement import POStatus  # noqa: E402
 
 
-# --- gold computation (fixed SQL, independent of agent tools) ---------------
-
 def _wh_id(db, name):
     return db.execute(select(Warehouse.id).where(Warehouse.name == name)).scalar_one()
 
@@ -224,8 +222,6 @@ def compute_gold(db, check: dict):
     return None
 
 
-# --- answer matching ---------------------------------------------------------
-
 def fact_in_answer(fact, answer: str) -> bool:
     if isinstance(fact, str):
         return fact.lower() in answer.lower()
@@ -265,8 +261,6 @@ def score_case(case: dict, response: httpx.Response, gold) -> dict:
         accuracy = execution and all(fact_in_answer(f, answer) for f in gold)
     return {"execution_success": execution, "accuracy": accuracy}
 
-
-# --- main ---------------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)

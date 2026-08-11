@@ -1,10 +1,9 @@
-import "./landing.css";
+import { WarehouseLensLogo } from "@/components/WarehouseLensLogo";
 
 const cols = [
   {
     heading: "Product",
     links: [
-      { href: "#modules", label: "Modules" },
       { href: "#who", label: "Who it's for" },
       { href: "#faq", label: "FAQ" },
     ],
@@ -25,40 +24,54 @@ const cols = [
       { href: "#", label: "Security" },
     ],
   },
-] as const;
+];
 
 export function LandingFooter() {
   const year = new Date().getFullYear();
-  return (
-    <footer className="landing-footer">
-      <div className="footer-inner">
-        <div>
-          <a href="#top" className="footer-brand">
-            <span className="footer-brand-dot" />
-            WarehouseLens
-          </a>
-          <p className="footer-tagline">Warehouse operations, with an AI copilot.</p>
-        </div>
 
-        <nav className="footer-links" aria-label="Footer">
+  return (
+    <footer className="border-t border-[var(--line)] bg-[var(--bg)]">
+      <div className="mx-auto max-w-[var(--maxw)] px-6 py-12 lg:px-10">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Brand */}
+          <div>
+            <a href="#top" className="inline-block">
+              <WarehouseLensLogo variant="horizontal" size={28} />
+            </a>
+            <p className="mt-3 text-sm text-[var(--ink-mute)]">
+              Warehouse operations, with an AI copilot.
+            </p>
+          </div>
+
+          {/* Link Columns */}
           {cols.map((col) => (
-            <div key={col.heading}>
-              <div className="footer-col-heading">{col.heading}</div>
-              <ul className="footer-col-list">
+            <nav key={col.heading}>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-[var(--ink-mute)]">
+                {col.heading}
+              </p>
+              <ul className="space-y-2">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a href={link.href} className="footer-link">{link.label}</a>
+                    <a
+                      href={link.href}
+                      className="text-sm text-[var(--ink-soft)] transition hover:text-[var(--ink)]"
+                    >
+                      {link.label}
+                    </a>
                   </li>
                 ))}
               </ul>
-            </div>
+            </nav>
           ))}
-        </nav>
+        </div>
       </div>
 
-      <div className="footer-bottom">
-        <span>© {year} WarehouseLens. All rights reserved.</span>
-        <span>Built for teams that outgrew the spreadsheet.</span>
+      {/* Bottom Bar */}
+      <div className="border-t border-[var(--line)]">
+        <div className="mx-auto flex max-w-[var(--maxw)] flex-col items-center justify-between gap-2 px-6 py-5 text-xs text-[var(--ink-mute)] sm:flex-row lg:px-10">
+          <span>© {year} WarehouseLens. All rights reserved.</span>
+          <span>Built for teams that outgrew the spreadsheet.</span>
+        </div>
       </div>
     </footer>
   );

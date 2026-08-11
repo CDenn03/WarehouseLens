@@ -48,9 +48,6 @@ from app.core.security import CurrentUser
 from app.services.permission_service import resolve_permissions
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────
-
-
 def _get_user_in_tenant(db: Session, user_id: str, tenant_id: uuid.UUID) -> User:
     """Fetch a user and verify they belong to the caller's tenant.
 
@@ -154,9 +151,6 @@ def _user_to_read(
     )
 
 
-# ── Query operations ───────────────────────────────────────────────────────
-
-
 def list_users(
     db: Session,
     tenant_id: uuid.UUID,
@@ -227,8 +221,6 @@ def get_role_detail(db: Session, role_id: uuid.UUID):
 
     return RoleDetailRead(id=role.id, slug=role.slug, name=role.name, permissions=permissions, users=users)
 
-
-# ── Role CRUD ──────────────────────────────────────────────────────────────
 
 SYSTEM_ROLE_SLUGS = {"platform_admin", "tenant_admin"}
 
@@ -377,9 +369,6 @@ def delete_role(
         created_by=actor.sub,
     ))
     db.commit()
-
-
-# ── User CRUD ──────────────────────────────────────────────────────────────
 
 
 def create_user(
@@ -587,9 +576,6 @@ def get_user_activity(
     return entries
 
 
-# ── Role assignment ────────────────────────────────────────────────────────
-
-
 def assign_role(
     db: Session,
     *,
@@ -724,9 +710,6 @@ def revoke_role(
         action="revoke_role",
     )
     db.commit()
-
-
-# ── Warehouse assignment ───────────────────────────────────────────────────
 
 
 def assign_warehouse(

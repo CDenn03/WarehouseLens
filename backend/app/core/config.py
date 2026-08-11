@@ -18,10 +18,9 @@ class Settings(BaseSettings):
     keycloak_internal_url: str = ""
     keycloak_client_id: str = "warehouselens-backend"
 
-    # ── Keycloak Admin API ────────────────────────────────────────────
-    # Used to provision tenant admins and platform admins as real Keycloak
-    # accounts.  Base URL (no /realms suffix) and realm are derived from the
-    # issuer URL when left blank.
+    # Keycloak Admin API — used to provision tenant admins and platform admins
+    # as real Keycloak accounts. Base URL (no /realms suffix) and realm are
+    # derived from the issuer URL when left blank.
     keycloak_admin_url: str = ""
     keycloak_realm: str = ""
     # Realm the admin token is obtained from: "master" for the bootstrap admin

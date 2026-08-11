@@ -16,8 +16,6 @@ import {
 import { getErrorMessage } from "@/lib/utils";
 import type { ActionResult } from "@/lib/utils";
 
-// ── Role CRUD ───────────────────────────────────────────────────────────
-
 export async function submitCreateRole(
   name: string,
   slug?: string,
@@ -57,8 +55,6 @@ export async function submitDeleteRole(roleId: string): Promise<ActionResult> {
     return { ok: false, error: getErrorMessage(error) };
   }
 }
-
-// ── User CRUD ───────────────────────────────────────────────────────────
 
 export async function submitCreateUser(
   email: string,
@@ -101,8 +97,6 @@ export async function submitDeleteUser(userId: string): Promise<ActionResult> {
   }
 }
 
-// ── Role assignment ─────────────────────────────────────────────────────
-
 export async function submitAssignRole(
   userId: string,
   roleSlug: string,
@@ -131,8 +125,6 @@ export async function submitRevokeRole(
     return { ok: false, error: getErrorMessage(error) };
   }
 }
-
-// ── Warehouse assignment ────────────────────────────────────────────────
 
 export async function submitAssignWarehouse(
   userId: string,

@@ -3,7 +3,11 @@ import { getWarehouses } from "@/features/inventory/services/inventoryService";
 import type { Warehouse } from "@/features/inventory/types";
 import { ChatPanel } from "@/features/copilot/components/ChatPanel";
 
-export async function CopilotPage() {
+type Props = {
+  initialQuestion?: string;
+};
+
+export async function CopilotPage({ initialQuestion }: Props) {
   // If the warehouse list can't be loaded the chat still works — the scope
   // selector just falls back to "All warehouses".
   let warehouses: Warehouse[] = [];
@@ -19,7 +23,7 @@ export async function CopilotPage() {
         title="Copilot"
         description="Ask the operations agent about stock, orders, forecasts and more"
       />
-      <ChatPanel warehouses={warehouses} />
+      <ChatPanel warehouses={warehouses} initialQuestion={initialQuestion} />
     </div>
   );
 }

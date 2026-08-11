@@ -1,5 +1,3 @@
-import "./landing.css";
-
 const stats = [
   { value: "3", unit: "warehouses", desc: "managed from one workspace" },
   { value: "24", unit: "SKUs", desc: "tracked with per-site reorder points" },
@@ -9,13 +7,13 @@ const stats = [
 
 export function StatsSection() {
   return (
-    <div className="stats-bar">
-      <div className="stats-grid">
+    <div className="border-y border-[var(--line)] bg-[var(--bg-alt)]">
+      <div className="mx-auto grid max-w-[var(--maxw)] grid-cols-2 divide-x divide-[var(--line)] lg:grid-cols-4">
         {stats.map((s) => (
-          <div key={s.unit} className="stat-cell">
-            <div className="stat-value">{s.value}</div>
-            <div className="stat-unit">{s.unit}</div>
-            <div className="stat-desc">{s.desc}</div>
+          <div key={s.unit} className="px-6 py-8 text-center lg:py-10">
+            <p className="text-3xl font-semibold text-[var(--ink)]">{s.value}</p>
+            <p className="text-sm font-medium text-[var(--ink)]">{s.unit}</p>
+            <p className="mt-1 text-xs text-[var(--ink-mute)]">{s.desc}</p>
           </div>
         ))}
       </div>

@@ -46,9 +46,6 @@ from app.services import iam_service
 router = APIRouter(prefix="/iam", tags=["iam"])
 
 
-# ── Read endpoints ─────────────────────────────────────────────────────────
-
-
 @router.get("/users", response_model=list[UserRead])
 def list_users(
     include_deleted: bool = Query(default=False),
@@ -172,9 +169,6 @@ def delete_role(
     iam_service.delete_role(db, actor=actor, role_id=role_id)
 
 
-# ── Role assignment ────────────────────────────────────────────────────────
-
-
 @router.post("/users/{user_id}/roles", response_model=UserRead, status_code=201)
 def assign_role(
     user_id: str,
@@ -195,9 +189,6 @@ def revoke_role(
 ):
     """Revoke a role from a user.  Rejects if this would lock out the tenant."""
     iam_service.revoke_role(db, actor=actor, target_user_id=user_id, role_slug=slug)
-
-
-# ── Warehouse assignment ───────────────────────────────────────────────────
 
 
 @router.post(

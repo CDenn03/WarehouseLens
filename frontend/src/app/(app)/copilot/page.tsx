@@ -4,6 +4,11 @@ import { CopilotPage } from "@/features/copilot/components/CopilotPage";
 export const metadata: Metadata = { title: "Copilot" };
 export const dynamic = "force-dynamic";
 
-export default function Page() {
-  return <CopilotPage />;
+type Props = {
+  searchParams: Promise<{ q?: string }>;
+};
+
+export default async function Page({ searchParams }: Props) {
+  const { q } = await searchParams;
+  return <CopilotPage initialQuestion={q} />;
 }

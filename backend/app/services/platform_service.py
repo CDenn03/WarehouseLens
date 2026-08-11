@@ -45,9 +45,6 @@ TENANT_ADMIN_ROLE = "tenant_admin"
 PLATFORM_ADMIN_ROLE = "platform_admin"
 
 
-# ── Internal helpers ───────────────────────────────────────────────────────
-
-
 def _get_platform_tenant(db: Session) -> Tenant:
     t = db.execute(
         select(Tenant).where(Tenant.is_platform.is_(True))
@@ -224,9 +221,6 @@ def _provision_admin(
         created=result.created,
         temporary_password=result.temporary_password,
     )
-
-
-# ── Tenant CRUD ────────────────────────────────────────────────────────────
 
 
 TENANT_SORT_FIELDS = {
@@ -417,9 +411,6 @@ def reset_tenant_admin_password(
     _log(db, actor, "reset_tenant_admin_password", f"tenant_id={tenant_id}")
     db.commit()
     return user_id, tenant.admin_email, password
-
-
-# ── Platform admin management ──────────────────────────────────────────────
 
 
 def _platform_admin_read(db: Session, user_id: str, tenant_id: uuid.UUID) -> PlatformAdminRead:

@@ -62,9 +62,6 @@ class ProvisionResult:
     temporary_password: str | None
 
 
-# ── Configuration ──────────────────────────────────────────────────────────
-
-
 def _split_issuer(issuer: str) -> tuple[str, str]:
     """Split ``http://host/realms/<realm>`` into (base_url, realm)."""
     base, _, realm = issuer.partition("/realms/")
@@ -95,9 +92,6 @@ def is_configured() -> bool:
 
 def initial_password() -> str:
     return get_settings().initial_admin_password
-
-
-# ── Session ────────────────────────────────────────────────────────────────
 
 
 def _fetch_token(client: httpx.Client, settings: Settings, base: str) -> str:
@@ -189,9 +183,6 @@ def _to_user(payload: dict) -> KeycloakUser:
         username=payload.get("username") or "",
         enabled=payload.get("enabled", True),
     )
-
-
-# ── Operations ─────────────────────────────────────────────────────────────
 
 
 def _find_user_by_email(

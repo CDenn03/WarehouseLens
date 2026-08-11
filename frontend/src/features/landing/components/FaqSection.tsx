@@ -1,5 +1,3 @@
-import "./landing.css";
-
 const faqs = [
   {
     q: "Is the AI copilot safe to trust with real numbers?",
@@ -21,25 +19,37 @@ const faqs = [
     q: "What does it take to get started?",
     a: "Book a demo and we'll stand up a sandbox seeded with sample data so you can click through inventory, procurement, the outbound workflow, and the copilot the same day — no infrastructure on your side to begin.",
   },
-] as const;
+];
 
 export function FaqSection() {
   return (
-    <section id="faq" className="section-wrap--alt">
-      <div className="section-inner">
-        <div className="section-head">
-          <div className="section-eyebrow">/faq</div>
-          <h2 className="section-title">Questions, answered</h2>
+    <section id="faq" className="bg-[var(--bg-alt)] px-6 py-20 lg:px-10">
+      <div className="mx-auto max-w-2xl">
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <p className="mb-3 font-mono text-xs tracking-wide text-[var(--ink-mute)]">/faq</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
+            Questions, answered
+          </h2>
         </div>
 
-        <div className="faq-list">
+        {/* FAQ Items */}
+        <div className="divide-y divide-[var(--line)]">
           {faqs.map((item) => (
-            <details key={item.q} className="faq-item">
-              <summary className="faq-summary">
+            <details key={item.q} className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-[var(--ink)] marker:hidden">
                 {item.q}
-                <span className="faq-chevron" />
+                <svg
+                  className="h-5 w-5 shrink-0 text-[var(--ink-mute)] transition group-open:rotate-45"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <path d="M10 4v12M4 10h12" strokeLinecap="round" />
+                </svg>
               </summary>
-              <div className="faq-body">{item.a}</div>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--ink-soft)]">{item.a}</p>
             </details>
           ))}
         </div>

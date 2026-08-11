@@ -66,8 +66,6 @@ class CurrentUser:
     permissions: set[str] = field(default_factory=set)
 
 
-# ── JWKS cache with TTL ────────────────────────────────────────────────
-
 class _JWKSCache:
     """Thread-safe JWKS cache with TTL-based expiry and automatic rotation."""
 
@@ -93,7 +91,6 @@ class _JWKSCache:
 
 
 _jwks_cache = _JWKSCache()
-
 
 async def _fetch_jwks() -> dict[str, dict]:
     """Fetch Keycloak's public keys, cache by kid.
@@ -136,9 +133,6 @@ def _verify_token(token: str, jwks: dict[str, dict]) -> dict:
         audience=settings.keycloak_client_id,
         issuer=settings.keycloak_issuer_url,
     )
-
-
-# ── Tenant resolution ──────────────────────────────────────────────────
 
 
 def get_current_tenant(db: Session, user_sub: str) -> UUID:
@@ -359,9 +353,6 @@ def _resolve_identity(
     return tenant_id
 
 
-# ── User upsert ────────────────────────────────────────────────────────
-
-
 def upsert_user(
     db: Session,
     sub: str,
@@ -397,9 +388,6 @@ def upsert_user(
     db.flush()
 
 
-# ── Soft delete ────────────────────────────────────────────────────────
-
-
 def soft_delete_user(db: Session, user_sub: str) -> None:
     """Soft-delete a user: set ``deleted_at``, remove tenant memberships and
     role assignments.  Does NOT touch Keycloak — caller is responsible for
@@ -427,9 +415,6 @@ def soft_delete_user(db: Session, user_sub: str) -> None:
     )
 
     db.flush()
-
-
-# ── Identity resolution ────────────────────────────────────────────────
 
 
 async def get_current_user(
@@ -546,9 +531,6 @@ def require_permission(permission: str):
     return checker
 
 
-# ── Tenant scope ───────────────────────────────────────────────────────
-
-
 def enforce_tenant_scope(
     resource_tenant_id: UUID,
     current_tenant_id: UUID,
@@ -561,8 +543,6 @@ def enforce_tenant_scope(
     if resource_tenant_id != current_tenant_id:
         raise ForbiddenError("cross-tenant access denied")
 
-
-# ── Warehouse scope ────────────────────────────────────────────────────
 
 def assigned_warehouse_ids(db: Session, user: CurrentUser) -> set[UUID]:
     """Return warehouse IDs assigned to this user within their current tenant."""

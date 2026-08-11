@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { LogoutButton } from "@/components/LogoutButton";
+import { WarehouseLensLogo } from "@/components/WarehouseLensLogo";
 
 export interface NavItem {
   href: string;
@@ -61,25 +62,7 @@ export function SidebarContent({
         className="flex h-14 items-center gap-2 border-b px-5"
         style={{ borderColor: "var(--border-soft)" }}
       >
-        <span
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-ink-on-brand"
-          style={{ background: "var(--green-900)" }}
-        >
-          <svg
-            className="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M2.25 21h19.5M3.75 21V9.349m16.5 11.651V9.349m-16.5 0L12 3l8.25 6.349M7.5 21v-6h3v6m3-6h3v6"
-            />
-          </svg>
-        </span>
+        <WarehouseLensLogo variant="mark" size={32} />
         <div className="min-w-0">
           <span
             className="block truncate text-base font-semibold tracking-tight"

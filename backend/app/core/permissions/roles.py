@@ -92,8 +92,6 @@ ROLE_DEFINITIONS: dict[str, set[str]] = {
     },
 }
 
-# ── Derived constants ──────────────────────────────────────────────────
-
 ROLE_NAMES: dict[str, str] = {
     "admin": "Administrator",
     "warehouse_manager": "Warehouse Manager",

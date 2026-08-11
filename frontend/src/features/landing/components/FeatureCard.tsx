@@ -1,5 +1,3 @@
-import { cn } from "@/lib/utils";
-
 interface FeatureCardProps {
   variant?: "dark" | "light";
   eyebrow: string;
@@ -15,21 +13,33 @@ export default function FeatureCard({
   subtitle,
   children,
 }: FeatureCardProps) {
+  const isDark = variant === "dark";
+
   return (
-    <div className={cn("feature-card", variant === "dark" ? "feature-card--dark" : "feature-card--light")}>
-      <div className="feature-card__body">
-        <div className={cn("feature-card__eyebrow", variant === "light" && "feature-card__eyebrow--light")}>
+    <div
+      className={`flex flex-col justify-between rounded-2xl border p-5 ${
+        isDark
+          ? "border-white/10 bg-[var(--forest)]"
+          : "border-[var(--line)] bg-[var(--bg-alt)]"
+      }`}
+    >
+      <div className="mb-4">
+        <p
+          className={`mb-3 text-[10px] font-medium uppercase tracking-wider ${
+            isDark ? "text-white/40" : "text-[var(--ink-mute)]"
+          }`}
+        >
           {eyebrow}
-        </div>
+        </p>
         {children}
       </div>
       <div>
-        <div className={cn("feature-card__title", variant === "light" && "feature-card__title--light")}>
+        <p className={`font-medium ${isDark ? "text-white" : "text-[var(--ink)]"}`}>
           {title}
-        </div>
-        <div className={cn("feature-card__sub", variant === "light" && "feature-card__sub--light")}>
+        </p>
+        <p className={`text-sm ${isDark ? "text-white/50" : "text-[var(--ink-mute)]"}`}>
           {subtitle}
-        </div>
+        </p>
       </div>
     </div>
   );

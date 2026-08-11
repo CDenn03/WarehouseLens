@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
-import "@/features/landing/components/landing.css";
 
 export const metadata: Metadata = {
   title: "WarehouseLens — warehouse operations, unified",

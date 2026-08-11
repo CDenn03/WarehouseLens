@@ -15,9 +15,6 @@ def _slugify(value: str) -> str:
     return slug
 
 
-# ── Role schemas ───────────────────────────────────────────────────────────
-
-
 class RoleRead(BaseModel):
     id: uuid.UUID
     slug: str
@@ -65,18 +62,12 @@ class RoleUpdate(BaseModel):
         return self
 
 
-# ── Warehouse assignment schemas ───────────────────────────────────────────
-
-
 class WarehouseAssignmentRead(BaseModel):
     warehouse_id: uuid.UUID
     warehouse_name: str
     assigned_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-# ── User schemas ───────────────────────────────────────────────────────────
 
 
 class UserRead(BaseModel):
@@ -135,18 +126,12 @@ class UserUpdate(BaseModel):
         return self
 
 
-# ── Request bodies ─────────────────────────────────────────────────────────
-
-
 class AssignRoleRequest(BaseModel):
     role_slug: str
 
 
 class AssignWarehouseRequest(BaseModel):
     warehouse_id: uuid.UUID
-
-
-# ── Activity schemas ───────────────────────────────────────────────────────
 
 
 class UserActivityEntry(BaseModel):

@@ -103,7 +103,6 @@ def main() -> None:
 
         slowpoke = suppliers[2]
 
-        # --- PO history with receipts (stock inflow) -----------------------
         print("Seeding purchase-order history...")
         start = TODAY - timedelta(days=HISTORY_DAYS)
         for wh in warehouses:
@@ -171,7 +170,6 @@ def main() -> None:
                     )
         db.flush()
 
-        # --- daily demand (stock outflow) with seasonality ------------------
         print("Seeding demand history (issues)...")
         received: dict[tuple, int] = {}
         for wh_id, p_id, total in db.execute(
@@ -209,7 +207,6 @@ def main() -> None:
                 )
         db.flush()
 
-        # --- materialize warehouse_stock from the transaction log -----------
         print("Materializing warehouse_stock...")
         for (wh_id, p_id), total_in in received.items():
             on_hand = total_in - issued[(wh_id, p_id)]
@@ -252,11 +249,9 @@ def main() -> None:
             row.reorder_point = row.quantity_on_hand + rng.randint(20, 60)
         db.flush()
 
-        # --- RBAC: one user scoped to a single warehouse ---------------------
         db.add(UserWarehouseAssignment(user_id=SCOPED_USER[0], warehouse_id=warehouses[0].id))
         db.commit()
 
-        # --- outbound requests in every status, via the REAL state machine ---
         print("Seeding outbound workflow (one request per status)...")
         nairobi, mombasa = warehouses[0], warehouses[1]
 
@@ -348,7 +343,6 @@ def main() -> None:
         cancelled.status = OutboundStatus.CANCELLED
         db.commit()
 
-        # --- summary ---------------------------------------------------------
         tx_count = db.execute(select(func.count()).select_from(InventoryTransaction)).scalar_one()
         print(
             f"Done. {len(warehouses)} warehouses, {len(products)} products, "

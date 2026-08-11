@@ -11,8 +11,6 @@ import type {
   WarehouseHealth,
 } from "@/features/dashboard/types";
 
-// ── Core KPI / chart fetchers ──────────────────────────────────────────────
-
 export function getKpis(warehouseId?: string): Promise<KpiSummary> {
   return apiFetch<KpiSummary>("/dashboard/kpis", {
     query: { warehouse_id: warehouseId },
@@ -33,8 +31,6 @@ export function getAbcRanking(warehouseId?: string): Promise<AbcRankingRow[]> {
     query: { warehouse_id: warehouseId },
   });
 }
-
-// ── Warehouse health grid ──────────────────────────────────────────────────
 
 /**
  * Builds a per-warehouse health summary by running KPI + outbound queries
@@ -83,8 +79,6 @@ export async function getWarehouseHealth(
 
   return results;
 }
-
-// ── Recent activity feed ───────────────────────────────────────────────────
 
 /** Returns the 10 most-recently-created outbound requests as activity items. */
 export async function getRecentActivity(

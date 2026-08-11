@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const SUGGESTIONS = [
-  "Which SKUs are at risk of stockout in Nairobi this week?",
-  "Summarise open outbound requests across all warehouses",
-  "What products should I reorder for Mombasa?",
-  "Show demand forecast for packaging tape",
+  "Which products are below their reorder point?",
+  "What's the total inventory value across all warehouses?",
+  "Which supplier has the worst on-time delivery record?",
+  "What outbound requests are still in picking?",
 ];
 
 export function CopilotEntryCard() {

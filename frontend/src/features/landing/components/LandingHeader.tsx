@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { WarehouseLensLogo } from "@/components/WarehouseLensLogo";
 
 export function LandingHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,11 +32,10 @@ export function LandingHeader() {
         {/* Brand */}
         <a
           href="#top"
-          className="inline-flex items-baseline gap-px text-base font-bold tracking-tight"
-          style={{ color: "var(--ink)" }}
+          className="inline-flex items-center"
           aria-label="WarehouseLens home"
         >
-          WarehouseLens
+          <WarehouseLensLogo variant="horizontal" size={40} />
         </a>
 
         {/* Desktop nav */}
@@ -44,7 +44,6 @@ export function LandingHeader() {
           aria-label="Primary"
         >
           {[
-            { href: "#features", label: "Modules" },
             { href: "#how", label: "How it works" },
             { href: "#who", label: "Who it's for" },
             { href: "#copilot", label: "Copilot" },
@@ -61,15 +60,7 @@ export function LandingHeader() {
           ))}
         </nav>
 
-        {/* Desktop actions */}
         <div className="hidden items-center gap-2.5 md:flex">
-          <a
-            href="#faq"
-            className="inline-flex items-center rounded-full border px-5 py-2.5 text-sm font-semibold transition-colors hover:border-[var(--green-900)] hover:text-[var(--green-900)]"
-            style={{ borderColor: "var(--border)", color: "var(--ink)" }}
-          >
-            Contact us
-          </a>
           <Link
             href="/dashboard"
             className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold text-[#f4f3ee] transition-colors hover:opacity-90"
@@ -79,7 +70,6 @@ export function LandingHeader() {
           </Link>
         </div>
 
-        {/* Mobile hamburger */}
         <button
           className="flex flex-col gap-1.5 p-2 md:hidden"
           aria-label="Toggle menu"

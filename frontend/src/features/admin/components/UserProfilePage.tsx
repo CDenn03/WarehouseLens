@@ -64,7 +64,6 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
         Back to users
       </Link>
 
-      {/* ── Profile header ─────────────────────────────────────────── */}
       <div
         className="flex flex-col gap-5 rounded-xl sm:flex-row sm:items-center"
         style={{
@@ -129,7 +128,6 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
         )}
       </div>
 
-      {/* ── Stats strip ────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {[
           {
@@ -185,7 +183,6 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
         ))}
       </div>
 
-      {/* ── Warehouses ─────────────────────────────────────────────── */}
       <Card
         title="Warehouse Assignments"
         actions={
@@ -246,7 +243,6 @@ export function UserProfilePage({ user, roles, warehouses }: Props) {
         )}
       </Card>
 
-      {/* ── Recent Activity ────────────────────────────────────────── */}
       <Card title="Recent Activity">
         {loadingActivity ? (
           <div className="flex items-center gap-2 text-sm" style={{ color: "var(--ink-mute)" }}>

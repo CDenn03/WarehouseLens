@@ -70,7 +70,6 @@ export async function DashboardPage({ warehouseId }: { warehouseId?: string }) {
 
   return (
     <div className="space-y-8">
-      {/* ── Page header ── */}
       <PageHeader
         title="Dashboard"
         description={`${scopeName}${alertSuffix}`}
@@ -87,10 +86,8 @@ export async function DashboardPage({ warehouseId }: { warehouseId?: string }) {
         }
       />
 
-      {/* ── KPI row ── */}
       <KpiCards kpis={kpis} />
 
-      {/* ── Warehouse health grid ── */}
       {!warehouseId && (
         <section aria-label="Warehouse health">
           <div className="mb-3 flex items-center gap-2">
@@ -114,7 +111,6 @@ export async function DashboardPage({ warehouseId }: { warehouseId?: string }) {
         </section>
       )}
 
-      {/* ── Charts + right-column ── */}
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Left 2/3: charts stacked */}
         <div className="space-y-6 xl:col-span-2">

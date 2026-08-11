@@ -22,8 +22,6 @@ export interface AbcRankingRow {
   abc_class: AbcClass;
 }
 
-// ── Extended types for the enriched dashboard ──────────────────────────────
-
 /** Per-warehouse health card, assembled client-side from existing endpoints. */
 export interface WarehouseHealth {
   id: string;

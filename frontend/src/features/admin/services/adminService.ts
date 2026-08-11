@@ -7,8 +7,6 @@ import type {
   UserActivityEntry,
 } from "@/features/admin/types";
 
-// ── Users ───────────────────────────────────────────────────────────────
-
 export function listUsers(
   includeDeleted = false,
   search?: string,
@@ -67,8 +65,6 @@ export function getUserActivity(
   });
 }
 
-// ── Roles ───────────────────────────────────────────────────────────────
-
 export function listRoles(search?: string): Promise<RoleRead[]> {
   return apiFetch<RoleRead[]>("/iam/roles", {
     query: search ? { search } : {},
@@ -111,13 +107,9 @@ export function deleteRole(roleId: string): Promise<void> {
   return apiFetch<void>(`/iam/roles/${roleId}`, { method: "DELETE" });
 }
 
-// ── Permissions ─────────────────────────────────────────────────────────
-
 export function listPermissions(): Promise<PermissionRead[]> {
   return apiFetch<PermissionRead[]>("/iam/permissions");
 }
-
-// ── Role assignment ─────────────────────────────────────────────────────
 
 export function assignRole(
   userId: string,
@@ -134,8 +126,6 @@ export function revokeRole(userId: string, roleSlug: string): Promise<void> {
     method: "DELETE",
   });
 }
-
-// ── Warehouse assignment ────────────────────────────────────────────────
 
 export function assignWarehouse(
   userId: string,

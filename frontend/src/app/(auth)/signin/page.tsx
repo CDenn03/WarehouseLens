@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { WarehouseLensLogo } from "@/components/WarehouseLensLogo";
 
 function SignInForm() {
   const searchParams = useSearchParams();
@@ -22,9 +23,9 @@ function SignInForm() {
           boxShadow: "0 12px 40px rgba(0,0,0,0.06)",
         }}
       >
-        <h1 className="mb-2 text-xl font-bold" style={{ color: "var(--ink)" }}>
-          WarehouseLens
-        </h1>
+        <div className="mb-6 flex justify-center">
+          <WarehouseLensLogo variant="horizontal" size={36} />
+        </div>
         <p className="mb-8 text-sm" style={{ color: "var(--ink-mute)" }}>
           Sign in to continue
         </p>

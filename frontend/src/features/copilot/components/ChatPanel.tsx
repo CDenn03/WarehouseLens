@@ -12,19 +12,16 @@ import type { ChatMessage } from "@/features/copilot/types";
 import { CopilotToolResult } from "@/features/copilot/components/CopilotToolResult";
 
 const suggestions = [
-  "Which SKUs are below their reorder point?",
-  "What is the total inventory value right now?",
-  "Show me open outbound requests.",
-  "Forecast demand for our top product over the next 30 days.",
+  "Which products are below their reorder point?",
+  "What's the total inventory value across all warehouses?",
+  "Which supplier has the worst on-time delivery record?",
+  "What outbound requests are still in picking?",
 ];
 
-let messageCounter = 0;
 function nextId(): string {
-  messageCounter += 1;
-  return `msg-${messageCounter}`;
+  return crypto.randomUUID();
 }
 
-/** "inventory_query" -> "Inventory Query" */
 function formatToolLabel(toolName: string): string {
   return toolName
     .split("_")
@@ -49,19 +46,15 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <p className="whitespace-pre-wrap">{message.content}</p>
         {!isUser && message.toolUsed && (
           <div className="mt-2">
-            <Badge tone="brand" className="normal-case">
-              {formatToolLabel(message.toolUsed)}
-            </Badge>
           </div>
         )}
       </div>
-      {/* Structured data behind the prose — full result set, not just what the LLM mentioned. */}
       {!isUser && !message.isError && <CopilotToolResult data={message.data} />}
     </div>
   );
 }
 
-export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
+export function ChatPanel({ warehouses, initialQuestion }: { warehouses: Warehouse[]; initialQuestion?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [warehouseId, setWarehouseId] = useState("");
@@ -107,9 +100,18 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
     });
   };
 
+  // Auto-send initial question from URL param on mount
+  const initialQuestionSent = useRef(false);
+  useEffect(() => {
+    if (initialQuestion && !initialQuestionSent.current) {
+      initialQuestionSent.current = true;
+      send(initialQuestion);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestion]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-brand-100 bg-surface-panel shadow-sm">
-      {/* Scope selector */}
       <div className="flex items-center justify-between gap-4 border-b border-brand-100 px-4 py-3">
         <p className="text-sm font-medium text-ink-soft">Conversation scope</p>
         <div className="w-56">
@@ -126,7 +128,6 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
         </div>
       </div>
 
-      {/* Message list */}
       <div
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto bg-brand-50/60 p-4"
@@ -166,7 +167,6 @@ export function ChatPanel({ warehouses }: { warehouses: Warehouse[] }) {
         )}
       </div>
 
-      {/* Composer */}
       <form
         className="flex items-end gap-2 border-t border-brand-100 p-4"
         onSubmit={(event) => {
