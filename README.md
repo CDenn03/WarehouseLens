@@ -20,12 +20,14 @@ An AI-powered multi-warehouse operations platform with a natural-language copilo
 | Frontend (all feature pages, platform dashboard, admin UI) | **Real** | `frontend/src/features/` |
 | Seed-data generator | **Real** | `data/generate_seed_data.py` |
 | Evaluation suite (gold answers + harness) | **Real** | `eval/` |
-| **Keycloak** JWT validation | **Scaffold** | `backend/app/core/security.py` |
-| **AI/agent** (LangGraph planner, tools, `/agent/query`) | **Scaffold** | `backend/app/agent/` |
+| Keycloak JWT validation (JWKS verify, 15-min key cache, rotation) | **Real** | `backend/app/core/security.py` |
+| AI copilot (LangGraph plan/execute/synthesize, tool registry, `/agent/query`) | **Real** | `backend/app/agent/` |
 | **Redis** (cache/lock client) | **Scaffold** | `backend/app/core/redis_client.py` |
 | **Railway** deployment | **Checklist** | `RAILWAY.md` |
 
-The RBAC *enforcement* is **real and tested** — JWT *validation* is scaffolded (reads `X-Debug-User` header in development so scoped-user behavior is testable before Keycloak is wired).
+RBAC *enforcement* and JWT *validation* are both real and tested. Keycloak JWTs are verified against the realm's JWKS endpoint with a 15-minute key cache that handles rotation; the `X-Debug-User` header is an environment-gated fallback for tests and local development only, so scoped-user behaviour stays testable without a running Keycloak.
+
+The copilot is implemented, not stubbed: a LangGraph `plan -> execute -> synthesize` graph over a fixed tool registry, using Google Gemini via `langchain-google-genai`. The planner never generates SQL — it selects exactly one tool, the tool runs a parameterized query, and a second model call turns the structured result into prose. Warehouse-scope checks run inside the graph, so an out-of-scope question is refused rather than answered. Redis remains the one deliberate learning scaffold: real method signatures, no-op bodies (see the module docstring).
 
 ---
 
@@ -163,7 +165,7 @@ warehouselens/
 │   │   ├── schemas/         # Pydantic request/response schemas
 │   │   ├── services/        # business logic (one file per domain)
 │   │   ├── forecasting/     # Prophet + XGBoost models + backtest
-│   │   ├── agent/           # LangGraph planner scaffold + tools
+│   │   ├── agent/           # LangGraph planner + tool registry
 │   │   └── worker.py        # background aggregation process
 │   ├── migrations/          # Alembic migrations 0001–0006
 │   └── tests/               # 94 pytest tests
