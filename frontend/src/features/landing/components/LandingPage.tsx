@@ -2,6 +2,7 @@ import { LandingHeader } from "./LandingHeader";
 import LandingHero from "./LandingHero";
 import LandingModules from "./LandingModules";
 import { StatsSection } from "./StatsSection";
+import { TestimonialsSection } from "./TestimonialsSection";
 import { HowItWorksSection } from "./HowItWorksSection";
 import { WhoSection } from "./WhoSection";
 import { CopilotSection } from "./CopilotSection";
@@ -18,6 +19,7 @@ export default function Page() {
       <LandingHero />
       <LandingModules />
       <StatsSection />
+      <TestimonialsSection />
       <HowItWorksSection />
       <WhoSection />
       <CopilotSection />
