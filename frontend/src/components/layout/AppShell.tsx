@@ -266,7 +266,7 @@ export function AppShell({
           {/* Mobile hamburger */}
           <button
             type="button"
-            className="flex items-center justify-center rounded-lg p-1.5 transition-colors hover:bg-brand-50 md:hidden"
+            className="flex items-center justify-center rounded-md p-1.5 transition-colors hover:bg-brand-50 md:hidden"
             onClick={() => setDrawerOpen(true)}
             aria-label="Open navigation menu"
           >

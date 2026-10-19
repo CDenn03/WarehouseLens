@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const warehouses = [
   { name: "Nairobi", status: "Healthy", isWarning: false },
   { name: "Mombasa", status: "Low stock — 2 items below reorder", isWarning: true },
@@ -24,38 +26,33 @@ export default function LandingHero() {
           <div>
 
             <h1 className="mb-6 text-4xl font-semibold leading-[1.1] tracking-tight text-[var(--ink)] sm:text-5xl lg:text-[3.25rem]">
-              Know what&apos;s happening across every warehouse.
+              See stock risk before it becomes a missed shipment.
             </h1>
 
             <p className="mb-8 max-w-md text-base leading-relaxed text-[var(--ink-soft)]">
-              Monitor inventory, procurement, fulfillment, and warehouse performance from a single
-              workspace. Real-time visibility into stock levels, operational risks, and purchasing
-              decisions across every site.
+              WarehouseLens brings inventory, procurement, and outbound work into one operational picture. Reorder risk and active workflow stay visible across every site.
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <button className="rounded-lg bg-[var(--forest)] px-5 py-2.5 text-sm font-medium text-[var(--ink-on-brand)] shadow-md transition hover:opacity-90">
-                Request Demo
-              </button>
+              <Link href="/dashboard" className="rounded-md bg-[var(--forest)] px-5 py-2.5 text-sm font-medium text-[var(--ink-on-brand)] transition hover:opacity-90">
+                Open the workspace
+              </Link>
               <a
                 href="#modules"
-                className="rounded-lg border border-[var(--line)] px-5 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--forest)] hover:text-[var(--forest)]"
+                className="rounded-md border border-[var(--line)] px-5 py-2.5 text-sm font-medium text-[var(--ink)] transition hover:border-[var(--forest)] hover:text-[var(--forest)]"
               >
-                See how it works
+                See the workflow
               </a>
             </div>
           </div>
 
           {/* Right: Dashboard Preview */}
           <div className="relative">
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--forest)] p-6 shadow-xl">
+            <div className="rounded-md border border-[var(--line)] bg-[var(--forest)] p-6">
               {/* Panel Header */}
               <div className="mb-5 flex items-center justify-between">
-                <span className="text-sm font-medium text-[var(--ink-on-brand)]">Warehouse Overview</span>
-                <span className="flex items-center gap-1.5 text-xs text-[var(--sage)]">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                  Live
-                </span>
+                <span className="text-sm font-medium text-[var(--ink-on-brand)]">Example workspace</span>
+                <span className="text-xs text-[var(--sage)]">Example data</span>
               </div>
 
               {/* Warehouse Status */}
@@ -67,7 +64,7 @@ export default function LandingHero() {
                   {warehouses.map((w) => (
                     <div
                       key={w.name}
-                      className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                      className={`flex items-center justify-between rounded-md px-3 py-2 text-sm ${
                         w.isWarning ? "bg-amber-500/10" : "bg-emerald-500/10"
                       }`}
                     >
@@ -125,7 +122,7 @@ export default function LandingHero() {
               {/* Footer Stats */}
               <div className="flex items-end justify-between border-t border-white/10 pt-4">
                 <div>
-                  <p className="text-[10px] text-white/40">Inventory Health</p>
+                  <p className="text-[10px] text-white/40">Example inventory health</p>
                   <p className="text-2xl font-semibold text-[var(--ink-on-brand)]">96%</p>
                 </div>
                 <p className="text-xs text-white/40">Across 3 warehouses</p>

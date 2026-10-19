@@ -4,7 +4,7 @@ const steps = [
     title: "Connect your warehouses",
     desc: "A platform admin provisions each site in minutes. Users are scoped to exactly the warehouses they need — nothing more.",
     art: (
-      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-xl" aria-hidden="true">
+      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-md" aria-hidden="true">
         <rect width="480" height="270" fill="var(--forest)" />
         {[80, 240, 400].map((x) => (
           <g key={x}>
@@ -24,7 +24,7 @@ const steps = [
     title: "Load your catalogue",
     desc: "Import products with SKUs, categories, and unit costs. Reorder points are set per warehouse so Site A's thresholds never bleed into Site B.",
     art: (
-      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-xl" aria-hidden="true">
+      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-md" aria-hidden="true">
         <rect width="480" height="270" fill="var(--forest-soft)" />
         {[60, 110, 160, 210].map((y, i) => (
           <g key={y}>
@@ -42,7 +42,7 @@ const steps = [
     title: "Ask the copilot anything",
     desc: "Demand trends, reorder risks, supplier lead times — your team gets answers in plain language, with the same scope limits as the UI.",
     art: (
-      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-xl" aria-hidden="true">
+      <svg viewBox="0 0 480 270" className="h-44 w-full rounded-t-md" aria-hidden="true">
         <rect width="480" height="270" fill="#0f1d0e" />
         <rect x={40} y={50} width={220} height={44} rx="10" fill="rgba(239,235,221,0.08)" />
         <rect x={56} y={65} width={150} height={10} rx="4" fill="rgba(239,235,221,0.35)" />
@@ -64,17 +64,17 @@ export function HowItWorksSection() {
         <div className="mb-12 text-center">
           <p className="mb-3 font-mono text-xs tracking-wide text-[var(--ink-mute)]">/how it works</p>
           <h2 className="mb-3 text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
-            Up and running the same day
+            Start with a working operational model
           </h2>
           <p className="mx-auto max-w-lg text-[var(--ink-soft)]">
-            No weeks-long data migration. A sandbox with seed data is ready before you finish your first coffee.
+            Explore a realistic sandbox first, then connect the warehouses, roles, and workflows that matter to your operation.
           </p>
         </div>
 
         {/* Steps */}
         <div className="grid gap-6 md:grid-cols-3">
           {steps.map((step) => (
-            <article key={step.number} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--panel)]">
+            <article key={step.number} className="overflow-hidden rounded-md border border-[var(--line)] bg-[var(--panel)]">
               {step.art}
               <div className="p-5">
                 <p className="mb-1 font-mono text-xs text-[var(--rust)]">{step.number}</p>

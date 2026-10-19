@@ -120,7 +120,7 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
                 {tile.label}
               </p>
               <span
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
                 style={{ background: tile.bgVar, color: tile.accentVar }}
               >
                 {tile.icon}
@@ -160,12 +160,11 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
               key={tile.label}
               href={tile.href}
               className={cn(
-                "block rounded-xl p-5 transition-shadow hover:shadow-md",
+                "block rounded-md p-5 transition-colors hover:border-brand-300",
               )}
               style={{
                 border: `1px solid ${tile.borderVar}`,
                 background: "var(--panel)",
-                boxShadow: "var(--shadow)",
               }}
             >
               {inner}
@@ -176,7 +175,7 @@ export function KpiCards({ kpis }: { kpis: KpiSummary }) {
         return (
           <div
             key={tile.label}
-            className="rounded-xl p-5"
+            className="rounded-md p-5"
             style={{
               border: `1px solid ${tile.borderVar}`,
               background: "var(--panel)",

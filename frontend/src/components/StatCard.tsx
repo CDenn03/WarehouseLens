@@ -11,16 +11,15 @@ export interface StatCardProps {
 export function StatCard({ label, value, hint, icon }: StatCardProps) {
   return (
     <div
-      className="rounded-xl p-5"
+      className="rounded-md p-5"
       style={{
         background: "var(--panel)",
         border: "1px solid var(--border-soft)",
-        boxShadow: "var(--shadow)",
       }}
     >
       <div className="flex items-center gap-3">
         <span
-          className="flex h-9 w-9 items-center justify-center rounded-lg"
+          className="flex h-9 w-9 items-center justify-center rounded-md"
           style={{ background: "var(--green-050)", color: "var(--green-900)" }}
         >
           {icon}

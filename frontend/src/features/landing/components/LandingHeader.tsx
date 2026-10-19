@@ -20,8 +20,7 @@ export function LandingHeader() {
     <header
       className="sticky top-0 z-50"
       style={{
-        background: "color-mix(in srgb, var(--bg) 88%, transparent)",
-        backdropFilter: "saturate(160%) blur(10px)",
+        background: "var(--bg)",
         borderBottom: "1px solid var(--border-soft)",
       }}
     >
@@ -63,8 +62,8 @@ export function LandingHeader() {
         <div className="hidden items-center gap-2.5 md:flex">
           <Link
             href="/dashboard"
-            className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-semibold text-[#f4f3ee] transition-colors hover:opacity-90"
-            style={{ background: "var(--green-900)", boxShadow: "0 8px 18px rgba(34,54,30,0.24)" }}
+            className="inline-flex items-center rounded-md px-5 py-2.5 text-sm font-semibold text-[#f4f3ee] transition-colors hover:opacity-90"
+            style={{ background: "var(--green-900)" }}
           >
             Sign in
           </Link>
@@ -127,7 +126,7 @@ export function LandingHeader() {
             <a
               key={href}
               href={href}
-              className="rounded-lg px-1 py-2.5 text-sm font-medium"
+              className="rounded-md px-1 py-2.5 text-sm font-medium"
               style={{ color: "var(--ink-soft)" }}
             >
               {label}

@@ -17,7 +17,7 @@ export default function FeatureCard({
 
   return (
     <div
-      className={`flex flex-col justify-between rounded-2xl border p-5 ${
+      className={`flex flex-col justify-between rounded-md border p-5 ${
         isDark
           ? "border-white/10 bg-[var(--forest)]"
           : "border-[var(--line)] bg-[var(--bg-alt)]"

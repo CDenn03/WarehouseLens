@@ -111,7 +111,7 @@ export function ChatPanel({ warehouses, initialQuestion }: { warehouses: Warehou
   }, [initialQuestion]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-brand-100 bg-surface-panel shadow-sm">
+    <div className="flex min-h-0 flex-1 flex-col rounded-md border border-brand-100 bg-surface-panel">
       <div className="flex items-center justify-between gap-4 border-b border-brand-100 px-4 py-3">
         <p className="text-sm font-medium text-ink-soft">Conversation scope</p>
         <div className="w-56">
@@ -144,7 +144,7 @@ export function ChatPanel({ warehouses, initialQuestion }: { warehouses: Warehou
                   key={suggestion}
                   type="button"
                   onClick={() => send(suggestion)}
-                  className="rounded-full border border-brand-100 bg-surface-panel px-3 py-1.5 text-xs text-ink-soft shadow-sm transition-colors hover:border-brand-300 hover:text-brand-900"
+                  className="rounded-md border border-brand-100 bg-surface-panel px-3 py-1.5 text-xs text-ink-soft transition-colors hover:border-brand-300 hover:text-brand-900"
                 >
                   {suggestion}
                 </button>

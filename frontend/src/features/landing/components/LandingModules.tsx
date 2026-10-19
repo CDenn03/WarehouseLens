@@ -10,7 +10,7 @@ export default function LandingModules() {
             /see it in action
           </p>
           <h2 className="text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
-            Built for every corner of your warehouse
+            One operational picture, from stock to dispatch
           </h2>
         </div>
 
@@ -68,7 +68,7 @@ export default function LandingModules() {
               ].map((tile) => (
                 <div
                   key={tile.label}
-                  className={`rounded-lg p-3 ${
+                  className={`rounded-md p-3 ${
                     tile.accent ? "bg-[var(--rust)]/20" : "bg-white/[0.06]"
                   }`}
                 >

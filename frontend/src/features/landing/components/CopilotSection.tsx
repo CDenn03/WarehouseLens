@@ -53,7 +53,7 @@ export function CopilotSection() {
         </div>
 
         {/* Chat Panel */}
-        <div className="rounded-2xl border border-white/10 bg-white/[0.04]">
+        <div className="rounded-md border border-white/10 bg-white/[0.04]">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
             <div className="flex items-center gap-2 text-sm font-medium text-white/80">
@@ -80,13 +80,13 @@ export function CopilotSection() {
               <div key={i} className="space-y-3">
                 {/* User */}
                 <div className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-br-md bg-white/10 px-4 py-2.5 text-sm text-white/90">
+                  <div className="max-w-[85%] rounded-md bg-white/10 px-4 py-2.5 text-sm text-white/90">
                     {ex.q}
                   </div>
                 </div>
                 {/* Assistant */}
                 <div className="flex justify-start">
-                  <div className="max-w-[85%] rounded-2xl rounded-bl-md bg-white/[0.06] px-4 py-2.5 text-sm leading-relaxed text-white/70">
+                  <div className="max-w-[85%] rounded-md bg-white/[0.06] px-4 py-2.5 text-sm leading-relaxed text-white/70">
                     {ex.a}
                   </div>
                 </div>

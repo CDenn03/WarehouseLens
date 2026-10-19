@@ -21,8 +21,8 @@ export function Card({
 }: CardProps) {
   return (
     <section
-      className={cn("rounded-xl bg-[var(--panel)]", className)}
-      style={{ border: "1px solid var(--border-soft)", boxShadow: "var(--shadow)" }}
+      className={cn("rounded-md bg-[var(--panel)]", className)}
+      style={{ border: "1px solid var(--border-soft)" }}
     >
       {(title || actions) && (
         <div

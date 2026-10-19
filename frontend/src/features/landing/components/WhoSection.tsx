@@ -64,14 +64,14 @@ export function WhoSection() {
           {roles.map((role) => (
             <article
               key={role.label}
-              className={`rounded-2xl border p-5 transition ${
+              className={`rounded-md border p-5 transition ${
                 role.active
                   ? "border-[var(--forest)] bg-[var(--forest)] text-[var(--ink-on-brand)]"
                   : "border-[var(--line)] bg-[var(--panel)] text-[var(--ink)]"
               }`}
             >
               <span
-                className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg ${
+                className={`mb-4 flex h-10 w-10 items-center justify-center rounded-md ${
                   role.active ? "bg-white/10 text-[var(--sage)]" : "bg-[var(--bg-alt)] text-[var(--ink-soft)]"
                 }`}
               >
