@@ -1,19 +1,19 @@
 const exchanges = [
   {
-    q: "Which SKUs in Nairobi are at risk of stockout this week?",
-    a: "3 SKUs are below their reorder point: Packaging Tape 48mm (6 days), Pallet Wrap L (12 days), Corner Guards (4 days). Packaging Tape is most urgent — supplier lead time is 5 days.",
+    q: "Which SKUs in Example Site A are at risk this week?",
+    a: "Illustrative answer: 3 example SKUs are below their reorder point. The most urgent item has a five-day supplier lead-time scenario and is marked for review.",
   },
   {
-    q: "Draft a purchase order for the critical items.",
-    a: "Created PO-2049 (draft) for Acme Trading Co — Packaging Tape 48mm × 200 units, Corner Guards × 150 units. Total: $1,240. Ready to review.",
+    q: "Prepare a purchase-order draft for the critical items.",
+    a: "Illustrative answer: a draft purchase order is prepared for review. In an active tenant, quantities and suppliers are sourced from the scoped operational records.",
   },
 ];
 
 const points = [
-  "Scoped to your assigned warehouses",
-  "Cites the data source with every answer",
-  "Can draft purchase orders from insights",
-  "Benchmarked against a gold-answer eval suite",
+  "Designed for warehouse-scoped access",
+  "Returns evidence from purpose-built data tools",
+  "Can prepare operational actions for review",
+  "Evaluated against a gold-answer test suite",
 ];
 
 export function CopilotSection() {
@@ -22,15 +22,14 @@ export function CopilotSection() {
       <div className="mx-auto grid max-w-[var(--maxw)] gap-12 lg:grid-cols-2 lg:items-center">
         {/* Copy */}
         <div>
-          <p className="mb-3 font-mono text-xs tracking-wide text-[var(--sage)]">/ai copilot</p>
+          <p className="mb-3 font-mono text-xs tracking-wide text-[var(--sage)]">/operations copilot</p>
           <h2 className="mb-4 text-2xl font-semibold tracking-tight text-[var(--ink-on-brand)] sm:text-3xl">
             Ask questions in plain language.
             <br />
-            Get answers from real data.
+            Review scoped operational evidence.
           </h2>
           <p className="mb-6 max-w-md text-white/60">
-            The copilot routes every question to a purpose-built tool against the live database — no hallucinated
-            numbers, no free-form SQL.
+            The production deployment currently uses illustrative workflow data. In a connected tenant, the copilot routes questions to purpose-built tools, remains inside warehouse scope, and cites the operational evidence behind each result.
           </p>
           <ul className="space-y-2.5">
             {points.map((p) => (
@@ -66,12 +65,9 @@ export function CopilotSection() {
                   />
                 </svg>
               </span>
-              Warehouse Copilot
+              Warehouse Copilot example
             </div>
-            <span className="flex items-center gap-1.5 text-xs text-[var(--sage)]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-              Live
-            </span>
+            <span className="text-xs text-[var(--sage)]">Illustrative data</span>
           </div>
 
           {/* Messages */}

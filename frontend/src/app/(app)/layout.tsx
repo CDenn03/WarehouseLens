@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: appName,
     template: `%s · ${appName}`,
   },
-  description: "Warehouse operations with an AI copilot",
+  description: "Warehouse operations console for inventory, procurement, fulfillment and risk.",
 };
 
 const HEADER_CONTEXT: Record<string, string> = {

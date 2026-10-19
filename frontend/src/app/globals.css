@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Manrope";
+  src: url("/brand/fonts/Manrope-Variable.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,71 +18,71 @@
 @layer base {
   :root {
     /* Green scale */
-    --green-950: #1c2818;
-    --green-900: #22361e;
-    --green-800: #2c4326;
-    --green-700: #33472e;
-    --green-600: #465741;
-    --green-300: #8a9880;
-    --green-100: #e4e8df;
-    --green-075: #e9efe6;
-    --green-050: #f0f2ea;
+    --green-950: #173D32;
+    --green-900: #173D32;
+    --green-800: #235244;
+    --green-700: #2F6252;
+    --green-600: #4D7668;
+    --green-300: #93A996;
+    --green-100: #D5DDD5;
+    --green-075: #E4EAE3;
+    --green-050: #EDF0E9;
 
     /* Surfaces */
-    --bg: #faf9f5;
-    --bg-alt: #f1efe7;
+    --bg: #F5F2E9;
+    --bg-alt: #ECE8DC;
     --panel: #ffffff;
 
     /* Ink */
-    --ink: #171f14;
-    --ink-soft: #4c5646;
-    --ink-mute: #7b8272;
-    --ink-on-brand: #f4f3ee;
+    --ink: #202C27;
+    --ink-soft: #58665E;
+    --ink-mute: #77827A;
+    --ink-on-brand: #F5F2E9;
 
     /* Borders */
     --border: rgba(23, 31, 20, 0.1);
     --border-soft: rgba(23, 31, 20, 0.06);
 
     /* Semantic — error */
-    --error: #b91c1c;
+    --error: #A32F2F;
     --error-light: #fef2f2;
     --error-border: #fecaca;
-    --error-text: #991b1b;
+    --error-text: #A32F2F;
 
     /* Semantic — success */
-    --success: #059669;
+    --success: #236243;
     --success-light: #ecfdf5;
     --success-border: #a7f3d0;
-    --success-text: #065f46;
+    --success-text: #236243;
 
     /* Semantic — warning */
-    --warning: #d97706;
+    --warning: #815600;
     --warning-light: #fffbeb;
     --warning-border: #fde68a;
-    --warning-text: #92400e;
+    --warning-text: #815600;
 
     /* Semantic — info */
-    --info: #0284c7;
+    --info: #275E82;
     --info-light: #f0f9ff;
     --info-border: #bae6fd;
-    --info-text: #075985;
+    --info-text: #275E82;
 
     /* Shadows */
     --shadow: none;
     --shadow-lg: 0 16px 40px rgba(23, 31, 20, 0.12);
 
     /* Layout */
-    --radius: 10px;
-    --radius-sm: 6px;
+    --radius: 6px;
+    --radius-sm: 4px;
     --maxw: 1160px;
 
     /* Landing palette */
-    --line: #DAD5C6;
-    --forest: #1D2E20;
-    --forest-soft: #2A3E2D;
+    --line: #D5DDD5;
+    --forest: #173D32;
+    --forest-soft: #235244;
     --sage: #93A889;
-    --sage-deep: #5E7358;
-    --rust: #C1673A;
+    --sage-deep: #93A996;
+    --rust: #B46043;
     --rust-deep: #8A431F;
     --card-line: rgba(255, 255, 255, 0.12);
   }
@@ -86,8 +94,7 @@
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-      Helvetica, Arial, sans-serif;
+    font-family: "Manrope", Arial, sans-serif;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
@@ -95,7 +102,7 @@
 
   /* Authenticated shell: +2px base font size (18px vs 16px default) */
   .app-shell {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   h1,
@@ -118,7 +125,7 @@
   a:focus-visible,
   button:focus-visible,
   summary:focus-visible {
-    outline: 2px solid var(--green-900);
+    outline: 3px solid var(--info);
     outline-offset: 3px;
   }
 

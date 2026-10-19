@@ -21,7 +21,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     <Link
       href={item.href}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+        "flex items-center gap-3 rounded px-3 py-2 text-sm font-medium transition-colors",
         active ? "text-ink-on-brand" : "hover:bg-brand-50",
       )}
       style={

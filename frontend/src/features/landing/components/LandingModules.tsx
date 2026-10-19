@@ -12,12 +12,15 @@ export default function LandingModules() {
           <h2 className="text-2xl font-semibold tracking-tight text-[var(--ink)] sm:text-3xl">
             One operational picture, from stock to dispatch
           </h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm text-[var(--ink-mute)]">
+            Illustrative workflow data, shown to explain the product model rather than report active customer operations.
+          </p>
         </div>
 
         {/* Cards Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* Inventory */}
-          <FeatureCard eyebrow="Inventory" title="Cargo container" subtitle="WHL 0248113 · Nairobi">
+          <FeatureCard eyebrow="Inventory" title="Inventory record" subtitle="SKU-0248113 · Example site">
             <div className="flex h-24 items-end gap-1.5">
               {[88, 64, 95, 30, 18, 72, 12].map((h, i) => (
                 <div
@@ -30,11 +33,11 @@ export default function LandingModules() {
                 />
               ))}
             </div>
-            <p className="mt-2 text-xs text-white/50">1,842 units · 79% capacity</p>
+            <p className="mt-2 text-xs text-white/50">Illustrative units · Example capacity</p>
           </FeatureCard>
 
           {/* Fulfillment */}
-          <FeatureCard eyebrow="Fulfillment" title="Pick station" subtitle="Order #SO-4892 · Packing">
+          <FeatureCard eyebrow="Fulfillment" title="Pick workflow" subtitle="Example order · Packing">
             <div className="space-y-2.5">
               {[
                 { label: "Packing tape 48mm", pct: 100, text: "12/12" },
@@ -58,7 +61,7 @@ export default function LandingModules() {
           </FeatureCard>
 
           {/* Procurement */}
-          <FeatureCard eyebrow="Procurement" title="Procurement" subtitle="PO-2048 · Draft reorder">
+          <FeatureCard eyebrow="Procurement" title="Reorder workflow" subtitle="Example purchase order">
             <div className="grid grid-cols-2 gap-2">
               {[
                 { num: "6", label: "low stock alerts" },
@@ -80,7 +83,7 @@ export default function LandingModules() {
           </FeatureCard>
 
           {/* Forecasting */}
-          <FeatureCard variant="light" eyebrow="Forecasting" title="Forecasting" subtitle="14-day Prophet model">
+          <FeatureCard variant="light" eyebrow="Forecasting" title="Illustrative forecast" subtitle="14-day planning scenario">
             <div>
               <p className="text-3xl font-semibold text-[var(--ink)]">+18%</p>
               <p className="mb-3 text-xs text-[var(--ink-mute)]">projected demand, next 14 days</p>

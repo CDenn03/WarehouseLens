@@ -39,7 +39,7 @@ export function LandingFooter() {
               <WarehouseLensLogo variant="horizontal" size={28} />
             </a>
             <p className="mt-3 text-sm text-[var(--ink-mute)]">
-              Warehouse operations, with an AI copilot.
+              A clear view of operations across every warehouse.
             </p>
           </div>
 

@@ -1,0 +1,23 @@
+@font-face{font-family:Manrope;src:url('../fonts/Manrope-Variable.woff2') format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
+:root{
+  --wl-forest: #173D32;
+  --wl-ivory: #F5F2E9;
+  --wl-sage: #93A996;
+  --wl-rust: #B46043;
+  --wl-ink: #202C27;
+  --wl-muted: #58665E;
+  --wl-line: #D5DDD5;
+  --wl-white: #FFFFFF;
+  --wl-danger: #A32F2F;
+  --wl-warning: #815600;
+  --wl-success: #236243;
+  --wl-info: #275E82;
+}
+*{box-sizing:border-box}body{margin:0;background:var(--wl-ivory);color:var(--wl-ink);font:400 14px/1.55 Manrope,Arial,sans-serif}
+button,input,select{font:inherit}button{min-height:44px;padding:10px 18px;border:0;border-radius:4px;background:var(--wl-forest);color:white;font-weight:600}
+:focus-visible{outline:3px solid var(--wl-info);outline-offset:3px}
+.wl-panel{background:white;border:1px solid var(--wl-line);border-radius:6px;padding:24px}
+.wl-numeric{font-variant-numeric:tabular-nums}.wl-muted{color:var(--wl-muted)}
+.wl-badge{padding:3px 8px;border:1px solid currentColor;border-radius:3px;font-weight:600}
+[data-theme="dark"]{--wl-ivory:#102B23;--wl-ink:#F5F2E9;--wl-muted:#B7C5BC;--wl-line:#466457;--wl-white:#173D32}
+[data-theme="dark"] .wl-panel{background:var(--wl-white)}

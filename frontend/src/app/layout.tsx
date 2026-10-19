@@ -5,24 +5,29 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "WarehouseLens",
-  description: "AI-powered multi-warehouse operations platform",
+  description: "A clear view of inventory, procurement, fulfillment, demand and risk across every warehouse.",
   icons: {
     icon: [
-      { url: "/brand/warehouse-lens/favicon.svg", type: "image/svg+xml" },
+      { url: "/brand/icons/favicon.ico", sizes: "any" },
+      { url: "/brand/icons/favicon-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
+      { url: "/brand/icons/favicon-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
     ],
-    apple: [
-      { url: "/brand/warehouse-lens/icon-192.png", sizes: "192x192", type: "image/png" },
-    ],
+    apple: [{ url: "/brand/icons/app-icon-180.png", sizes: "180x180", type: "image/png" }],
   },
   manifest: "/manifest.json",
+  openGraph: {
+    title: "WarehouseLens",
+    description: "A clear view of operations across every warehouse.",
+    images: [{ url: "/brand/social/social-card-1200x630.png", width: 1200, height: 630, alt: "WarehouseLens" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "WarehouseLens",
+    description: "A clear view of operations across every warehouse.",
+    images: ["/brand/social/social-card-1200x630.png"],
+  },
 };
 
-/**
- * Root layout — provides <html>/<body>, global CSS, and session context.
- * Route groups provide their own segment layouts:
- *   (landing) > bare page (LandingPage has its own header/footer)
- *   (app)     > Sidebar + top header shell
- */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">

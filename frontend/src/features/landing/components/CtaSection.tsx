@@ -10,7 +10,7 @@ export function CtaSection() {
             Ready to work from one operational picture?
           </h2>
           <p className="mx-auto mb-8 max-w-lg text-white/60">
-            Open the workspace to explore the product, then use the same structure to model your own warehouses, roles, and workflow.
+            Explore the production deployment with illustrative data. It demonstrates the product model and does not represent active customer operations.
           </p>
           <Link
             href="/dashboard"

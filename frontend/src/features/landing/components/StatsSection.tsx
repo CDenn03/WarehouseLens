@@ -1,8 +1,8 @@
 const stats = [
-  { value: "3", unit: "warehouses", desc: "managed from one workspace" },
-  { value: "24", unit: "SKUs", desc: "tracked with per-site reorder points" },
-  { value: "14-day", unit: "forecast", desc: "Prophet + XGBoost, benchmarked" },
-  { value: "6", unit: "roles", desc: "scoped to site and capability" },
+  { value: "Multi-site", unit: "warehouse model", desc: "illustrative operating scenarios" },
+  { value: "Per-site", unit: "reorder points", desc: "separate stock thresholds by location" },
+  { value: "14-day", unit: "forecast horizon", desc: "illustrative planning scenario" },
+  { value: "Role-scoped", unit: "access model", desc: "permissions bounded by site and capability" },
 ] as const;
 
 export function StatsSection() {

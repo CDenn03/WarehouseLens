@@ -1,23 +1,23 @@
 {
   "name": "WarehouseLens",
-  "short_name": "WLens",
-  "description": "AI-powered multi-warehouse operations platform",
-  "start_url": "/dashboard",
+  "short_name": "WarehouseLens",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#1C2818",
-  "theme_color": "#1D2E20",
+  "background_color": "#F5F2E9",
+  "theme_color": "#173D32",
   "icons": [
     {
-      "src": "/brand/warehouse-lens/icon-192.png",
+      "src": "/brand/icons/app-icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/brand/warehouse-lens/icon-512.png",
+      "src": "/brand/icons/app-icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "description": "A clear view of inventory, procurement, fulfillment, demand and risk across every warehouse."
 }

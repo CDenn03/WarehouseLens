@@ -1,15 +1,15 @@
 import Link from "next/link";
 
 const warehouses = [
-  { name: "Nairobi", status: "Healthy", isWarning: false },
-  { name: "Mombasa", status: "Low stock — 2 items below reorder", isWarning: true },
-  { name: "Kisumu", status: "Healthy", isWarning: false },
+  { name: "Example site A", status: "Stock review complete", isWarning: false },
+  { name: "Example site B", status: "Low stock scenario", isWarning: true },
+  { name: "Example site C", status: "Stock review complete", isWarning: false },
 ];
 
 const reorderRisks = [
-  { item: "Packaging Tape", days: 6, severity: "critical" as const },
-  { item: "Pallet Wrap", days: 12, severity: "warning" as const },
-  { item: "Steel Straps", days: 18, severity: "ok" as const },
+  { item: "Example item A", days: 6, severity: "critical" as const },
+  { item: "Example item B", days: 12, severity: "warning" as const },
+  { item: "Example item C", days: 18, severity: "ok" as const },
 ];
 
 const severityStyles = {
@@ -26,11 +26,11 @@ export default function LandingHero() {
           <div>
 
             <h1 className="mb-6 text-4xl font-semibold leading-[1.1] tracking-tight text-[var(--ink)] sm:text-5xl lg:text-[3.25rem]">
-              See stock risk before it becomes a missed shipment.
+              Every warehouse. One clear view.
             </h1>
 
             <p className="mb-8 max-w-md text-base leading-relaxed text-[var(--ink-soft)]">
-              WarehouseLens brings inventory, procurement, and outbound work into one operational picture. Reorder risk and active workflow stay visible across every site.
+              WarehouseLens is a production-deployed operations platform demonstrated with illustrative workflow data. It brings inventory, procurement, fulfillment, demand and risk into one clear operating view.
             </p>
 
             <div className="flex flex-wrap gap-3">
@@ -122,10 +122,10 @@ export default function LandingHero() {
               {/* Footer Stats */}
               <div className="flex items-end justify-between border-t border-white/10 pt-4">
                 <div>
-                  <p className="text-[10px] text-white/40">Example inventory health</p>
+                  <p className="text-[10px] text-white/40">Illustrative health score</p>
                   <p className="text-2xl font-semibold text-[var(--ink-on-brand)]">96%</p>
                 </div>
-                <p className="text-xs text-white/40">Across 3 warehouses</p>
+                <p className="text-xs text-white/40">Illustrative scenario</p>
               </div>
             </div>
           </div>
